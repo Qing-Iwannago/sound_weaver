@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>声织 · AI音乐创作</title>
+<script src="https://cdn.jsdelivr.net/npm/midi-player-js@2.0.16/browser/midiplayer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink:    #F2B8C6;
+    --lavender:#C9B8E8;
+    --mint:    #B8E8D0;
+    --peach:   #F4C2A1;
+    --sky:     #B8D8E8;
+    --cream:   #FDF6EC;
+    --white:   #FFFFFF;
+    --text:    #4A4058;
+    --subtext: #8C7FA0;
+    --border:  #EDE3F5;
+    --shadow:  rgba(180,160,210,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Quicksand', 'Noto Serif SC', sans-serif;
+    background: var(--cream); color: var(--text); min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(201,184,232,0.25) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(242,184,198,0.25) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(184,232,208,0.15) 0%, transparent 60%);
+  }
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 40px; background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Noto Serif SC', serif; font-size: 1.25rem; font-weight: 600;
+    background: linear-gradient(135deg, var(--lavender), var(--pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 2px; display: flex; align-items: center; gap: 10px;
+  }
+  .logo-drop-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-svg { overflow: visible; }
+  .drop-body { animation: dropFall 2.8s ease-in-out infinite; }
+  @keyframes dropFall {
+    0%   { transform: translateY(-14px); opacity: 0; }
+    15%  { opacity: 1; }
+    52%  { transform: translateY(0px); opacity: 1; }
+    58%  { transform: translateY(2px); opacity: 0; }
+    100% { transform: translateY(-14px); opacity: 0; }
+  }
+  .ripple1 { animation: rippleWave 2.8s ease-out infinite; transform-origin: 24px 34px; }
+  .ripple2 { animation: rippleWave 2.8s ease-out 0.2s infinite; transform-origin: 24px 34px; }
+  .ripple3 { animation: rippleWave 2.8s ease-out 0.4s infinite; transform-origin: 24px 34px; }
+  @keyframes rippleWave {
+    0%,55% { transform: scale(0); opacity: 0; }
+    58%    { transform: scale(0.05); opacity: 0.8; }
+    100%   { transform: scale(1); opacity: 0; }
+  }
+  .piano-keys { animation: keysFade 2.8s ease-in-out infinite; }
+  @keyframes keysFade { 0%,55%{opacity:0} 75%{opacity:0.25} 88%{opacity:0.35} 100%{opacity:0} }
+  .water-pool { animation: waterFade 2.8s ease-in-out infinite; }
+  @keyframes waterFade { 0%,50%{opacity:1} 80%{opacity:0.2} 100%{opacity:0} }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-user { font-size: 0.83rem; color: var(--subtext); background: var(--border); padding: 6px 14px; border-radius: 20px; }
+  .btn { padding: 8px 20px; border-radius: 24px; border: none; cursor: pointer; font-family: inherit; font-size: 0.86rem; font-weight: 600; transition: all 0.25s; }
+  .btn-primary { background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; box-shadow: 0 4px 14px rgba(201,184,232,0.45); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201,184,232,0.55); }
+  .btn-secondary { background: white; color: var(--subtext); border: 1.5px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--lavender); color: var(--lavender); }
+  .btn-sm { padding: 6px 14px; font-size: 0.78rem; }
+
+  #auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 65px); padding: 40px 20px; }
+  .auth-card { background: white; border-radius: 28px; box-shadow: 0 20px 60px var(--shadow); padding: 48px 44px; width: 100%; max-width: 420px; border: 1px solid var(--border); animation: floatIn 0.5s ease; }
+  @keyframes floatIn { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  .auth-title { font-family: 'Noto Serif SC', serif; font-size: 1.7rem; font-weight: 600; margin-bottom: 8px; background: linear-gradient(135deg, var(--lavender), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .auth-sub { font-size: 0.88rem; color: var(--subtext); margin-bottom: 30px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--subtext); margin-bottom: 7px; letter-spacing: 0.5px; }
+  .form-input { width: 100%; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--cream); font-family: inherit; font-size: 0.92rem; color: var(--text); transition: all 0.2s; outline: none; }
+  .form-input:focus { border-color: var(--lavender); background: white; box-shadow: 0 0 0 4px rgba(201,184,232,0.15); }
+  .btn-full { width: 100%; padding: 13px; font-size: 0.95rem; margin-top: 8px; }
+  .auth-switch { text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--subtext); }
+  .auth-switch a { color: var(--lavender); font-weight: 600; cursor: pointer; }
+  .msg { padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 14px; display: none; }
+  .msg.error { background: #FFF0F3; color: #E07A9A; border: 1px solid #F2B8C6; display: block; }
+  .msg.success { background: #F0FFF8; color: #5CA87A; border: 1px solid #B8E8D0; display: block; }
+
+  #app-page { display: none; padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+  .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .card { background: white; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px var(--shadow); padding: 28px; }
+  .card-title { font-family: 'Noto Serif SC', serif; font-size: 1rem; font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .card-title-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--lavender), var(--pink)); }
+
+  .quick-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .quick-tag { padding: 5px 13px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: white; color: var(--subtext); transition: all 0.18s; font-family: inherit; }
+  .quick-tag:hover { border-color: var(--lavender); color: var(--lavender); background: rgba(201,184,232,0.08); }
+  .quick-tag.selected { background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; border-color: transparent; }
+
+  .desc-textarea { width: 100%; min-height: 120px; padding: 13px 15px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--cream); font-family: inherit; font-size: 0.9rem; color: var(--text); resize: vertical; transition: all 0.2s; outline: none; line-height: 1.6; }
+  .desc-textarea:focus { border-color: var(--lavender); background: white; box-shadow: 0 0 0 4px rgba(201,184,232,0.15); }
+  .desc-textarea::placeholder { color: #C4B8D4; }
+
+  .generate-btn { width: 100%; margin-top: 14px; padding: 13px; font-size: 0.95rem; border-radius: 16px; background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 600; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(201,184,232,0.4); transition: all 0.25s; }
+  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(201,184,232,0.5); }
+  .generate-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+  .btn-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .param-chip { background: var(--cream); border-radius: 12px; padding: 10px 14px; border: 1px solid var(--border); }
+  .param-chip-label { font-size: 0.68rem; color: var(--subtext); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .param-chip-value { font-size: 0.88rem; color: var(--text); font-weight: 600; margin-top: 3px; }
+
+  .player-area { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, rgba(201,184,232,0.15), rgba(242,184,198,0.15)); border-radius: 16px; padding: 14px 16px; margin-top: 14px; border: 1px solid var(--border); }
+  .play-btn { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--lavender), var(--pink)); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(201,184,232,0.45); transition: all 0.2s; flex-shrink: 0; }
+  .play-btn:hover { transform: scale(1.08); }
+  .play-icon { color: white; font-size: 1.2rem; margin-left: 2px; }
+  .pause-icon { color: white; font-size: 1.2rem; display: none; }
+  .film-reel-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+  .film-reel { width: 44px; height: 44px; }
+  .film-reel.spinning { animation: reelSpin 1.5s linear infinite; }
+  @keyframes reelSpin { to{transform:rotate(360deg)} }
+  .player-info { flex: 1; }
+  .player-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .player-sub { font-size: 0.75rem; color: var(--subtext); margin-top: 2px; }
+  .download-btn { padding: 7px 14px; border-radius: 20px; font-size: 0.78rem; background: white; border: 1.5px solid var(--border); color: var(--subtext); cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.2s; text-decoration: none; display: inline-block; }
+  .download-btn:hover { border-color: var(--mint); color: #5CA87A; }
+
+  .lyrics-header { display: flex; align-items: center; margin-bottom: 12px; gap: 8px; }
+  .lyrics-box { background: var(--cream); border-radius: 14px; padding: 16px 18px; border: 1px solid var(--border); max-height: 280px; overflow-y: auto; font-size: 0.88rem; line-height: 2; color: var(--text); white-space: pre-line; font-family: 'Noto Serif SC', serif; }
+  .lyrics-box::-webkit-scrollbar { width: 3px; }
+  .lyrics-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .lyrics-placeholder { color: var(--subtext); font-size: 0.86rem; text-align: center; padding: 28px 0; font-style: italic; }
+  .lyrics-edit-btn { font-size: 0.73rem; padding: 4px 10px; border-radius: 12px; border: 1.5px solid var(--border); background: white; color: var(--subtext); cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.2s; }
+  .lyrics-edit-btn:hover { border-color: var(--lavender); color: var(--lavender); }
+  .lyrics-edit-area { width: 100%; min-height: 200px; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--lavender); background: white; font-family: 'Noto Serif SC', serif; font-size: 0.88rem; color: var(--text); resize: vertical; outline: none; line-height: 2; display: none; }
+  .lyrics-save-btn { font-size: 0.73rem; padding: 4px 10px; border-radius: 12px; background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 600; display: none; }
+  .share-btn { padding: 4px 12px; border-radius: 12px; font-size: 0.73rem; background: rgba(244,194,161,0.2); border: 1.5px solid var(--peach); color: #A0522D; cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.2s; margin-left: auto; }
+  .share-btn:hover { background: rgba(244,194,161,0.35); }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tab { padding: 9px 20px; border-radius: 20px; font-size: 0.83rem; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: white; color: var(--subtext); transition: all 0.2s; font-family: inherit; }
+  .tab.active { background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; border-color: transparent; box-shadow: 0 4px 14px rgba(201,184,232,0.4); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .history-card { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 16px 18px; cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden; }
+  .history-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, var(--lavender), var(--pink)); }
+  .history-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px var(--shadow); }
+  .history-card-desc { font-size: 0.87rem; font-weight: 600; color: var(--text); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-genre { background: rgba(201,184,232,0.2); color: #7B6AA0; }
+  .tag-mood  { background: rgba(242,184,198,0.2); color: #B06080; }
+  .tag-bpm   { background: rgba(184,232,208,0.2); color: #4A9070; }
+  .history-time { font-size: 0.7rem; color: var(--subtext); margin-top: 8px; }
+
+  .chat-box { background: white; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px var(--shadow); overflow: hidden; }
+  .chat-messages { height: 280px; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-messages::-webkit-scrollbar { width: 3px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .chat-bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 0.86rem; line-height: 1.6; }
+  .chat-bubble.user { background: linear-gradient(135deg, var(--lavender), var(--pink)); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-bubble.ai { background: var(--cream); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+  .chat-input-row { display: flex; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--cream); }
+  .chat-input { flex: 1; padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-family: inherit; font-size: 0.86rem; outline: none; transition: all 0.2s; }
+  .chat-input:focus { border-color: var(--lavender); box-shadow: 0 0 0 3px rgba(201,184,232,0.15); }
+  .chat-send-btn { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--lavender), var(--pink)); border: none; cursor: pointer; color: white; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 3px 10px rgba(201,184,232,0.4); }
+  .chat-send-btn:hover { transform: scale(1.1); }
+
+  .profile-card { background: white; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px var(--shadow); padding: 32px; margin-top: 4px; }
+  .profile-avatar { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, var(--lavender), var(--pink)); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 14px; }
+  .profile-name { font-family: 'Noto Serif SC', serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 4px; }
+  .profile-sub { font-size: 0.83rem; color: var(--subtext); margin-bottom: 24px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stat-box { background: var(--cream); border-radius: 16px; padding: 18px; text-align: center; border: 1px solid var(--border); }
+  .stat-num { font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, var(--lavender), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .stat-label { font-size: 0.75rem; color: var(--subtext); margin-top: 4px; font-weight: 600; }
+
+  .share-modal { position: fixed; inset: 0; background: rgba(74,64,88,0.4); backdrop-filter: blur(4px); z-index: 300; display: none; align-items: center; justify-content: center; }
+  .share-modal.show { display: flex; }
+  .share-modal-card { background: white; border-radius: 24px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px var(--shadow); animation: floatIn 0.3s ease; }
+  .share-modal-title { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; }
+  .share-link-box { background: var(--cream); border-radius: 10px; padding: 12px 14px; font-size: 0.8rem; color: var(--subtext); word-break: break-all; border: 1.5px solid var(--border); margin-bottom: 16px; }
+  .share-modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .loading-overlay { position: fixed; inset: 0; background: rgba(253,246,236,0.88); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+  .loading-overlay.show { display: flex; }
+  .loading-reel { animation: reelSpin 1s linear infinite; }
+  .loading-text { font-size: 0.9rem; color: var(--subtext); font-weight: 600; }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--subtext); }
+  .empty-state-icon { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.5; }
+  .empty-state-text { font-size: 0.87rem; }
+
+  @media (max-width: 768px) {
+    .app-grid { grid-template-columns: 1fr; }
+    #app-page { padding: 16px; }
+    nav { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="logo-drop-wrap">
+      <svg class="logo-svg" width="44" height="44" viewBox="0 0 48 48">
+        <defs>
+          <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#C9B8E8"/>
+            <stop offset="100%" stop-color="#F2B8C6"/>
+          </linearGradient>
+          <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#B8D8E8" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#C9B8E8" stop-opacity="0.3"/>
+          </linearGradient>
+          <clipPath id="waterClip">
+            <ellipse cx="24" cy="34" rx="18" ry="12"/>
+          </clipPath>
+        </defs>
+        <ellipse class="water-pool" cx="24" cy="34" rx="18" ry="6" fill="url(#waterGrad)" stroke="#C9B8E8" stroke-width="1"/>
+        <ellipse class="ripple1" cx="24" cy="34" rx="18" ry="6" fill="none" stroke="#C9B8E8" stroke-width="1.2"/>
+        <ellipse class="ripple2" cx="24" cy="34" rx="18" ry="6" fill="none" stroke="#F2B8C6" stroke-width="0.9"/>
+        <ellipse class="ripple3" cx="24" cy="34" rx="18" ry="6" fill="none" stroke="#B8E8D0" stroke-width="0.6"/>
+        <g class="piano-keys" clip-path="url(#waterClip)">
+          <rect x="8"  y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="13" y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="18" y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="23" y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="28" y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="33" y="22" width="4" height="16" rx="0.5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+          <rect x="11" y="22" width="3" height="9" rx="0.5" fill="#888"/>
+          <rect x="16" y="22" width="3" height="9" rx="0.5" fill="#888"/>
+          <rect x="26" y="22" width="3" height="9" rx="0.5" fill="#888"/>
+          <rect x="31" y="22" width="3" height="9" rx="0.5" fill="#888"/>
+        </g>
+        <g class="drop-body">
+          <path d="M24 10 C24 10 19 18 19 22 C19 24.8 21.2 27 24 27 C26.8 27 29 24.8 29 22 C29 18 24 10 24 10Z" fill="url(#dropGrad)" opacity="0.92"/>
+          <ellipse cx="22" cy="18" rx="1.2" ry="2" fill="white" opacity="0.5" transform="rotate(-15 22 18)"/>
+        </g>
+      </svg>
+    </div>
+    声织
+  </div>
+  <div class="nav-right">
+    <div class="nav-user" id="nav-username" style="display:none"></div>
+    <button class="btn btn-secondary btn-sm" id="logout-btn" style="display:none" onclick="logout()">退出</button>
+    <button class="btn btn-primary btn-sm" id="nav-login-btn" onclick="showAuth('login')">登录</button>
+  </div>
+</nav>
+
+<div id="auth-page">
+  <div class="auth-card">
+    <div id="login-form">
+      <div class="auth-title">欢迎回来 ✨</div>
+      <div class="auth-sub">登录你的音乐创作空间</div>
+      <div id="login-msg" class="msg"></div>
+      <div class="form-group"><label class="form-label">用户名</label><input class="form-input" id="login-username" type="text" placeholder="请输入用户名"></div>
+      <div class="form-group"><label class="form-label">密码</label><input class="form-input" id="login-password" type="password" placeholder="请输入密码" onkeydown="if(event.key==='Enter')login()"></div>
+      <button class="btn btn-primary btn-full" onclick="login()">登 录</button>
+      <div class="auth-switch">还没有账号？<a onclick="showAuth('register')">立即注册</a></div>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="auth-title">创建账号 🎵</div>
+      <div class="auth-sub">加入音乐创作的世界</div>
+      <div id="register-msg" class="msg"></div>
+      <div class="form-group"><label class="form-label">用户名</label><input class="form-input" id="reg-username" type="text" placeholder="请输入用户名"></div>
+      <div class="form-group"><label class="form-label">密码</label><input class="form-input" id="reg-password" type="password" placeholder="请输入密码"></div>
+      <div class="form-group"><label class="form-label">邮箱（选填）</label><input class="form-input" id="reg-email" type="email" placeholder="请输入邮箱"></div>
+      <button class="btn btn-primary btn-full" onclick="register()">注 册</button>
+      <div class="auth-switch">已有账号？<a onclick="showAuth('login')">立即登录</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="app-page">
+  <div class="app-grid">
+    <div class="card">
+      <div class="card-title"><div class="card-title-dot"></div>创作新音乐</div>
+      <div style="margin-bottom:14px;">
+        <div class="form-label" style="margin-bottom:8px;">快速选择风格</div>
+        <div class="quick-tags">
+          <button class="quick-tag" onclick="selectTag(this,'一首忧郁的失恋慢歌，钢琴伴奏，让人想起雨夜')">💔 失恋</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首欢快活泼的夏日流行歌曲，充满阳光和活力')">☀️ 夏日</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首深情浪漫的情歌，温柔甜蜜，适合表白')">🌹 浪漫</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首激情摇滚歌曲，电吉他，充满力量感')">🎸 摇滚</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首平静舒缓的冥想音乐，让人放松心情')">🌙 治愈</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首充满中国风的古典歌曲，古筝琵琶，意境悠远')">🏮 国风</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首爵士风格的慵懒午后歌曲，萨克斯伴奏')">🎷 爵士</button>
+          <button class="quick-tag" onclick="selectTag(this,'一首思念故乡的民谣，朴实真挚，原声吉他')">🌾 民谣</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述你想要的音乐氛围</label>
+        <textarea class="desc-textarea" id="music-desc" placeholder="例如：一首忧郁的失恋慢歌，带着淡淡的钢琴声，让人想起雨夜的街道..."></textarea>
+      </div>
+      <button class="generate-btn" id="gen-btn" onclick="generateMusic()">
+        <span id="gen-btn-text">✨ 开始创作</span>
+        <div class="btn-spinner" id="gen-spinner"></div>
+      </button>
+      <div id="params-area" style="display:none;margin-top:22px;">
+        <div class="card-title" style="margin-bottom:12px;"><div class="card-title-dot"></div>音乐参数</div>
+        <div class="params-grid">
+          <div class="param-chip"><div class="param-chip-label">情绪</div><div class="param-chip-value" id="p-mood">-</div></div>
+          <div class="param-chip"><div class="param-chip-label">风格</div><div class="param-chip-value" id="p-genre">-</div></div>
+          <div class="param-chip"><div class="param-chip-label">BPM</div><div class="param-chip-value" id="p-bpm">-</div></div>
+          <div class="param-chip"><div class="param-chip-label">调式</div><div class="param-chip-value" id="p-key">-</div></div>
+        </div>
+        <div class="param-chip" style="margin-bottom:14px;"><div class="param-chip-label">和弦进行</div><div class="param-chip-value" id="p-chords">-</div></div>
+        <div class="player-area">
+          <button class="play-btn" onclick="togglePlay()">
+            <span class="play-icon">▶</span>
+            <span class="pause-icon">⏸</span>
+          </button>
+          <div class="player-info">
+            <div class="player-title" id="player-title">准备播放</div>
+            <div class="player-sub" id="player-sub">点击播放按钮</div>
+          </div>
+          <div class="film-reel-wrap">
+            <svg class="film-reel" id="film-reel" viewBox="0 0 52 52" fill="none">
+              <circle cx="26" cy="26" r="24" stroke="#C9B8E8" stroke-width="2.5" fill="white"/>
+              <circle cx="26" cy="26" r="8" fill="#C9B8E8" opacity="0.3"/>
+              <circle cx="26" cy="26" r="3" fill="#C9B8E8"/>
+              <circle cx="26" cy="6"  r="3" fill="#F2B8C6"/>
+              <circle cx="26" cy="46" r="3" fill="#F2B8C6"/>
+              <circle cx="6"  cy="26" r="3" fill="#F2B8C6"/>
+              <circle cx="46" cy="26" r="3" fill="#F2B8C6"/>
+              <circle cx="12" cy="12" r="3" fill="#B8E8D0"/>
+              <circle cx="40" cy="40" r="3" fill="#B8E8D0"/>
+              <circle cx="40" cy="12" r="3" fill="#B8E8D0"/>
+              <circle cx="12" cy="40" r="3" fill="#B8E8D0"/>
+              <line x1="26" y1="18" x2="26" y2="10" stroke="#C9B8E8" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="26" y1="34" x2="26" y2="42" stroke="#C9B8E8" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="18" y1="26" x2="10" y2="26" stroke="#C9B8E8" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="34" y1="26" x2="42" y2="26" stroke="#C9B8E8" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <a class="download-btn" id="download-btn" href="#" download style="display:none">⬇ 下载</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lyrics-header">
+        <div class="card-title" style="margin-bottom:0"><div class="card-title-dot"></div>生成歌词</div>
+        <button class="lyrics-edit-btn" id="edit-btn" onclick="toggleLyricsEdit()">✏️ 编辑</button>
+        <button class="lyrics-save-btn" id="save-btn" onclick="saveLyrics()">保存</button>
+        <button class="share-btn" id="share-btn" onclick="showShare()" style="display:none">🔗 分享</button>
+      </div>
+      <div class="lyrics-box" id="lyrics-box"><div class="lyrics-placeholder">✨ 输入描述，开始创作你的专属歌曲</div></div>
+      <textarea class="lyrics-edit-area" id="lyrics-edit-area" placeholder="在这里编辑歌词..."></textarea>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('history')">历史记录</button>
+    <button class="tab" onclick="switchTab('chat')">AI 对话</button>
+    <button class="tab" onclick="switchTab('profile')">个人中心</button>
+  </div>
+
+  <div class="tab-content active" id="tab-history">
+    <div class="history-grid" id="history-grid">
+      <div class="empty-state"><div class="empty-state-icon">🎵</div><div class="empty-state-text">还没有生成记录，快去创作吧！</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-chat">
+    <div class="chat-box" style="margin-top:4px;">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-bubble ai">你好！我是声织 AI 助手 🎵 你可以问我关于历史记录、音乐偏好分析，或者让我帮你生成音乐～</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="问我任何关于音乐的问题..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send-btn" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-profile">
+    <div class="profile-card">
+      <div class="profile-avatar">🎵</div>
+      <div class="profile-name" id="profile-name">-</div>
+      <div class="profile-sub">声织音乐创作者</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">创作总数</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-genre">-</div><div class="stat-label">最爱风格</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-mood">-</div><div class="stat-label">常见情绪</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="share-modal" id="share-modal">
+  <div class="share-modal-card">
+    <div class="share-modal-title">🔗 分享这首歌</div>
+    <div class="share-link-box" id="share-link-text"></div>
+    <div class="share-modal-btns">
+      <button class="btn btn-secondary btn-sm" onclick="copyShareLink()">复制链接</button>
+      <button class="btn btn-primary btn-sm" onclick="closeShare()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading-overlay">
+  <svg class="loading-reel" width="56" height="56" viewBox="0 0 52 52" fill="none">
+    <circle cx="26" cy="26" r="24" stroke="#C9B8E8" stroke-width="2.5" fill="white"/>
+    <circle cx="26" cy="26" r="8" fill="#C9B8E8" opacity="0.3"/>
+    <circle cx="26" cy="26" r="3" fill="#C9B8E8"/>
+    <circle cx="26" cy="6"  r="3" fill="#F2B8C6"/>
+    <circle cx="26" cy="46" r="3" fill="#F2B8C6"/>
+    <circle cx="6"  cy="26" r="3" fill="#F2B8C6"/>
+    <circle cx="46" cy="26" r="3" fill="#F2B8C6"/>
+  </svg>
+  <div class="loading-text">AI 正在创作中，请稍候...</div>
+</div>
+
+<script>
+  const API = 'http://localhost:8080';
+  let token = localStorage.getItem('token');
+  let username = localStorage.getItem('username');
+  let currentDownloadUrl = '';
+  let currentHistoryId = null;
+  let isPlaying = false;
+  let midiPlayer = null;
+  let audioContext = null;
+  let instrument = null;
+
+  window.onload = () => { if (token && username) showApp(); else showAuth('login'); };
+
+  function showAuth(type) {
+    document.getElementById('auth-page').style.display = 'flex';
+    document.getElementById('app-page').style.display = 'none';
+    document.getElementById('login-form').style.display = type==='login'?'block':'none';
+    document.getElementById('register-form').style.display = type==='register'?'block':'none';
+  }
+  function showApp() {
+    document.getElementById('auth-page').style.display = 'none';
+    document.getElementById('app-page').style.display = 'block';
+    document.getElementById('nav-username').style.display = 'block';
+    document.getElementById('nav-username').textContent = '👤 ' + username;
+    document.getElementById('logout-btn').style.display = 'block';
+    document.getElementById('nav-login-btn').style.display = 'none';
+    loadHistory();
+  }
+  async function login() {
+    const u = document.getElementById('login-username').value.trim();
+    const p = document.getElementById('login-password').value.trim();
+    if (!u||!p) return showMsg('login-msg','请填写用户名和密码','error');
+    try {
+      const res = await fetch(`${API}/auth/login?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`,{method:'POST'});
+      const data = await res.json();
+      if (data.success) { token=data.token; username=data.username; localStorage.setItem('token',token); localStorage.setItem('username',username); showApp(); }
+      else showMsg('login-msg', data.message||'登录失败','error');
+    } catch(e) { showMsg('login-msg','网络错误，请检查后端服务','error'); }
+  }
+  async function register() {
+    const u = document.getElementById('reg-username').value.trim();
+    const p = document.getElementById('reg-password').value.trim();
+    const e = document.getElementById('reg-email').value.trim();
+    if (!u||!p) return showMsg('register-msg','请填写用户名和密码','error');
+    try {
+      let url = `${API}/auth/register?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
+      if (e) url += `&email=${encodeURIComponent(e)}`;
+      const res = await fetch(url,{method:'POST'});
+      const data = await res.json();
+      if (data.success) { token=data.token; username=data.username; localStorage.setItem('token',token); localStorage.setItem('username',username); showApp(); }
+      else showMsg('register-msg',data.message||'注册失败','error');
+    } catch(e) { showMsg('register-msg','网络错误，请检查后端服务','error'); }
+  }
+  function logout() {
+    token=null; username=null; localStorage.removeItem('token'); localStorage.removeItem('username');
+    showAuth('login');
+    document.getElementById('nav-username').style.display='none';
+    document.getElementById('logout-btn').style.display='none';
+    document.getElementById('nav-login-btn').style.display='block';
+  }
+  function showMsg(id,text,type) { const el=document.getElementById(id); el.textContent=text; el.className='msg '+type; }
+
+  async function generateMusic() {
+    const desc = document.getElementById('music-desc').value.trim();
+    if (!desc) return alert('请输入音乐描述');
+    setGenerating(true);
+    document.getElementById('loading-overlay').classList.add('show');
+    try {
+      const res = await fetch(`${API}/music/create?description=${encodeURIComponent(desc)}`,{method:'POST',headers:{'Authorization':'Bearer '+token}});
+      const data = await res.json();
+      if (data.success) { showResult(data); loadHistory(); }
+      else alert('生成失败：'+(data.error||'未知错误'));
+    } catch(e) { alert('网络错误：'+e.message); }
+    finally { setGenerating(false); document.getElementById('loading-overlay').classList.remove('show'); }
+  }
+  function setGenerating(loading) {
+    document.getElementById('gen-btn').disabled = loading;
+    document.getElementById('gen-btn-text').style.display = loading?'none':'block';
+    document.getElementById('gen-spinner').style.display = loading?'block':'none';
+  }
+  function showResult(data) {
+    const p = data.params;
+    document.getElementById('params-area').style.display = 'block';
+    document.getElementById('p-mood').textContent = p.mood||'-';
+    document.getElementById('p-genre').textContent = p.genre||'-';
+    document.getElementById('p-bpm').textContent = p.bpm?p.bpm+' BPM':'-';
+    document.getElementById('p-key').textContent = p.key||'-';
+    document.getElementById('p-chords').textContent = p.chords||'-';
+    document.getElementById('lyrics-box').textContent = p.lyrics||'暂无歌词';
+    document.getElementById('player-title').textContent = (p.genre||'')+' · '+(p.key||'');
+    document.getElementById('player-sub').textContent = (p.mood||'')+' · '+(p.bpm||'')+' BPM';
+    currentDownloadUrl = API + data.downloadUrl;
+    currentHistoryId = data.historyId;
+    document.getElementById('download-btn').href = currentDownloadUrl;
+    document.getElementById('download-btn').style.display = 'inline-block';
+    document.getElementById('share-btn').style.display = 'inline-block';
+    stopPlay();
+  }
+
+  function togglePlay() { isPlaying ? stopPlay() : startPlay(); }
+  async function startPlay() {
+    if (!currentDownloadUrl) return;
+    try {
+      if (!audioContext) audioContext = new (window.AudioContext||window.webkitAudioContext)();
+      if (!instrument) instrument = await Soundfont.instrument(audioContext, 'acoustic_grand_piano');
+      const response = await fetch(currentDownloadUrl, {headers:{'Authorization':'Bearer '+token}});
+      const arrayBuffer = await response.arrayBuffer();
+      midiPlayer = new MidiPlayer.Player(function(event) {
+        if (event.name==='Note on' && event.velocity>0) {
+          instrument.play(event.noteName, audioContext.currentTime, {gain: event.velocity/100});
+        }
+      });
+      midiPlayer.loadArrayBuffer(arrayBuffer);
+      midiPlayer.play();
+      isPlaying = true;
+      document.querySelector('.play-icon').style.display = 'none';
+      document.querySelector('.pause-icon').style.display = 'block';
+      document.getElementById('film-reel').classList.add('spinning');
+      document.getElementById('player-sub').textContent = '🎵 正在播放...';
+    } catch(e) { console.error(e); alert('播放失败：'+e.message); }
+  }
+  function stopPlay() {
+    if (midiPlayer) { midiPlayer.stop(); midiPlayer = null; }
+    isPlaying = false;
+    document.querySelector('.play-icon').style.display = 'block';
+    document.querySelector('.pause-icon').style.display = 'none';
+    document.getElementById('film-reel').classList.remove('spinning');
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API}/music/history`,{headers:{'Authorization':'Bearer '+token}});
+      renderHistory(await res.json());
+    } catch(e) { console.error(e); }
+  }
+  function renderHistory(list) {
+    const grid = document.getElementById('history-grid');
+    if (!list||list.length===0) { grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🎵</div><div class="empty-state-text">还没有生成记录，快去创作吧！</div></div>`; return; }
+    grid.innerHTML = list.map(h=>`
+      <div class="history-card" onclick='loadHistoryItem(${JSON.stringify(h)})'>
+        <div class="history-card-desc">${h.description||'未知描述'}</div>
+        <div class="history-tags">
+          ${h.genre?`<span class="tag tag-genre">${h.genre}</span>`:''}
+          ${h.mood?`<span class="tag tag-mood">${h.mood}</span>`:''}
+          ${h.bpm?`<span class="tag tag-bpm">${h.bpm} BPM</span>`:''}
+        </div>
+        <div class="history-time">${h.createdAt?new Date(h.createdAt).toLocaleString('zh-CN'):''}</div>
+      </div>`).join('');
+  }
+  function loadHistoryItem(h) {
+    document.getElementById('params-area').style.display='block';
+    document.getElementById('p-mood').textContent=h.mood||'-';
+    document.getElementById('p-genre').textContent=h.genre||'-';
+    document.getElementById('p-bpm').textContent=h.bpm?h.bpm+' BPM':'-';
+    document.getElementById('p-key').textContent=h.key||'-';
+    document.getElementById('p-chords').textContent=h.chords||'-';
+    document.getElementById('lyrics-box').textContent=h.lyrics||'暂无歌词';
+    document.getElementById('player-title').textContent=(h.genre||'')+' · '+(h.key||'');
+    document.getElementById('player-sub').textContent=(h.mood||'')+' · '+(h.bpm||'')+' BPM';
+    if (h.filePath) { currentDownloadUrl=`${API}/music/download?path=${h.filePath}`; document.getElementById('download-btn').href=currentDownloadUrl; document.getElementById('download-btn').style.display='inline-block'; }
+    stopPlay(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim(); if (!msg) return;
+    input.value = ''; appendChat(msg,'user');
+    try {
+      const res = await fetch(`${API}/music/chat?message=${encodeURIComponent(msg)}`,{method:'POST',headers:{'Authorization':'Bearer '+token}});
+      const data = await res.json();
+      appendChat(data.response||'出错了，请重试','ai');
+    } catch(e) { appendChat('网络错误，请检查后端服务','ai'); }
+  }
+  function appendChat(text,role) {
+    const box = document.getElementById('chat-messages');
+    const b = document.createElement('div'); b.className='chat-bubble '+role; b.textContent=text;
+    box.appendChild(b); box.scrollTop=box.scrollHeight;
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['history','chat','profile'][i]===tab));
+    document.querySelectorAll('.tab-content').forEach((c,i)=>c.classList.toggle('active',['tab-history','tab-chat','tab-profile'][i]==='tab-'+tab));
+    if (tab==='profile') loadProfile();
+  }
+  function selectTag(el,text) {
+    document.querySelectorAll('.quick-tag').forEach(t=>t.classList.remove('selected'));
+    el.classList.add('selected'); document.getElementById('music-desc').value=text;
+  }
+  function toggleLyricsEdit() {
+    const box=document.getElementById('lyrics-box'), ea=document.getElementById('lyrics-edit-area');
+    const eb=document.getElementById('edit-btn'), sb=document.getElementById('save-btn');
+    if (ea.style.display==='block') { ea.style.display='none'; box.style.display='block'; eb.textContent='✏️ 编辑'; sb.style.display='none'; }
+    else { ea.value=box.textContent; ea.style.display='block'; box.style.display='none'; eb.textContent='取消'; sb.style.display='inline-block'; }
+  }
+  function saveLyrics() {
+    const ea=document.getElementById('lyrics-edit-area'), box=document.getElementById('lyrics-box');
+    box.textContent=ea.value; ea.style.display='none'; box.style.display='block';
+    document.getElementById('edit-btn').textContent='✏️ 编辑'; document.getElementById('save-btn').style.display='none';
+  }
+  function showShare() {
+    if (!currentHistoryId) return;
+    document.getElementById('share-link-text').textContent=`${window.location.origin}/music/share?id=${currentHistoryId}`;
+    document.getElementById('share-modal').classList.add('show');
+  }
+  function closeShare() { document.getElementById('share-modal').classList.remove('show'); }
+  function copyShareLink() { navigator.clipboard.writeText(document.getElementById('share-link-text').textContent).then(()=>alert('链接已复制！')); }
+
+  async function loadProfile() {
+    document.getElementById('profile-name').textContent = username;
+    try {
+      const res = await fetch(`${API}/music/history`,{headers:{'Authorization':'Bearer '+token}});
+      const list = await res.json();
+      document.getElementById('stat-total').textContent = list.length;
+      if (list.length>0) {
+        const gc={}, mc={};
+        list.forEach(h=>{ if(h.genre) gc[h.genre]=(gc[h.genre]||0)+1; if(h.mood) mc[h.mood]=(mc[h.mood]||0)+1; });
+        const tg=Object.entries(gc).sort((a,b)=>b[1]-a[1])[0];
+        const tm=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0];
+        document.getElementById('stat-genre').textContent=tg?tg[0]:'-';
+        document.getElementById('stat-mood').textContent=tm?tm[0]:'-';
+      }
+    } catch(e) { console.error(e); }
+  }
+</script>
+</body>
+</html>
