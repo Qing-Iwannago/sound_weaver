@@ -81,6 +81,10 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
         <!-- Spring Data JPA（操作数据库用的） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -164,5 +168,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

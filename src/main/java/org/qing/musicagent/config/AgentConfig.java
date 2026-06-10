@@ -4,18 +4,27 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import org.qing.musicagent.service.MusicAgent;
+import org.qing.musicagent.service.MusicTools;
+import org.qing.musicagent.service.RedisChatMemoryStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.qing.musicagent.service.MusicTools;
 
 @Configuration
 public class AgentConfig {
 
     @Bean
-    public MusicAgent musicAgent(OpenAiChatModel chatModel, MusicTools musicTools) {
+    public MusicAgent musicAgent(OpenAiChatModel chatModel,
+                                 MusicTools musicTools,
+                                 RedisChatMemoryStore chatMemoryStore) {
         return AiServices.builder(MusicAgent.class)
                 .chatLanguageModel(chatModel)
-                .chatMemory(MessageWindowChatMemory.withMaxMessages(10))
+                .chatMemoryProvider(memoryId ->
+                        MessageWindowChatMemory.builder()
+                                .id(memoryId)
+                                .maxMessages(30)
+                                .chatMemoryStore(chatMemoryStore)
+                                .build()
+                )
                 .tools(musicTools)
                 .build();
     }
