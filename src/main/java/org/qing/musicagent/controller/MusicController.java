@@ -1,6 +1,7 @@
 package org.qing.musicagent.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.qing.musicagent.model.MusicHistory;
 import org.qing.musicagent.model.MusicParams;
 import org.qing.musicagent.repository.MusicHistoryRepository;
@@ -16,9 +17,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/music")
@@ -30,52 +34,35 @@ public class MusicController {
     @Autowired private MusicHistoryRepository historyRepository;
     @Autowired private RagService ragService;
 
-    // 获取当前登录用户名
+    // 游客次数限制 key=IP+日期
+    private final ConcurrentHashMap<String, AtomicInteger> guestUsage = new ConcurrentHashMap<>();
+
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-    // 生成音乐：RAG检索乐理知识注入提示词，AI生成参数，MidiService生成MIDI文件
-    @PostMapping("/create")
-    public Map<String, Object> createMusic(@RequestParam String description) {
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty()) ip = request.getRemoteAddr();
+        return ip + "_" + LocalDate.now();
+    }
+
+    @PostMapping("/create/guest")
+    public Map<String, Object> createMusicGuest(@RequestParam String description, HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
         try {
-            String userId = getCurrentUsername();
-
-            // RAG检索相关乐理知识
-            String knowledge = ragService.retrieve(description);
-            String enhancedDescription = description;
-            if (!knowledge.isEmpty()) {
-                enhancedDescription = description + "\n\n参考以下乐理知识：\n" + knowledge;
+            String key = getClientIp(request);
+            AtomicInteger count = guestUsage.computeIfAbsent(key, k -> new AtomicInteger(0));
+            if (count.get() >= 8) {
+                result.put("success", false);
+                result.put("error", "今日游客次数已用完，请登录后继续使用");
+                result.put("limitReached", true);
+                return result;
             }
-
-            // AI生成音乐参数
-            String raw = musicAgent.createMusic(userId, enhancedDescription);
-            int start = raw.indexOf('{');
-            int end = raw.lastIndexOf('}');
-            if (start == -1 || end == -1) throw new RuntimeException("AI返回格式异常");
-            String json = raw.substring(start, end + 1);
-
-            MusicParams params = objectMapper.readValue(json, MusicParams.class);
-            String filePath = midiService.generateMidi(params);
-
-            // 保存生成历史
-            MusicHistory history = new MusicHistory();
-            history.setUsername(userId);
-            history.setDescription(description);
-            history.setMood(params.getMood());
-            history.setGenre(params.getGenre());
-            history.setBpm(params.getBpm());
-            history.setKey(params.getKey());
-            history.setChords(params.getChords());
-            history.setLyrics(params.getLyrics());
-            history.setFilePath(filePath);
-            historyRepository.save(history);
-
-            result.put("success", true);
-            result.put("params", params);
-            result.put("historyId", history.getId());
-            result.put("downloadUrl", "/music/download?path=" + filePath);
+            count.incrementAndGet();
+            String sessionId = "guest_" + request.getSession().getId();
+            result = doGenerate(description, sessionId);
+            result.put("remaining", 8 - count.get());
         } catch (Exception e) {
             e.printStackTrace();
             result.put("success", false);
@@ -84,12 +71,69 @@ public class MusicController {
         return result;
     }
 
-    // AI对话，支持工具调用
+    @PostMapping("/create")
+    public Map<String, Object> createMusic(@RequestParam String description) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            result = doGenerate(description, getCurrentUsername());
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    private Map<String, Object> doGenerate(String description, String userId) throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        String knowledge = ragService.retrieve(description);
+        String enhancedDescription = knowledge.isEmpty() ? description
+                : description + "\n\n参考以下乐理知识：\n" + knowledge;
+        String raw = musicAgent.createMusic(userId, enhancedDescription);
+        int start = raw.indexOf('{');
+        int end = raw.lastIndexOf('}');
+        if (start == -1 || end == -1) throw new RuntimeException("AI返回格式异常");
+        String json = raw.substring(start, end + 1);
+        MusicParams params = objectMapper.readValue(json, MusicParams.class);
+        String filePath = midiService.generateMidi(params);
+        MusicHistory history = new MusicHistory();
+        history.setUsername(userId);
+        history.setDescription(description);
+        history.setMood(params.getMood());
+        history.setGenre(params.getGenre());
+        history.setBpm(params.getBpm());
+        history.setKey(params.getKey());
+        history.setChords(params.getChords());
+        history.setLyrics(params.getLyrics());
+        history.setFilePath(filePath);
+        historyRepository.save(history);
+        result.put("success", true);
+        result.put("params", params);
+        result.put("historyId", history.getId());
+        result.put("downloadUrl", "/music/download?path=" + filePath);
+        return result;
+    }
+
     @PostMapping("/chat")
     public Map<String, Object> chat(@RequestParam String message) {
         Map<String, Object> result = new HashMap<>();
         try {
-            String userId = getCurrentUsername();
+            String response = musicAgent.chat(getCurrentUsername(), message);
+            result.put("success", true);
+            result.put("response", response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    @PostMapping("/chat/guest")
+    public Map<String, Object> chatGuest(@RequestParam String message, HttpServletRequest request) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String userId = "guest_" + request.getSession().getId();
             String response = musicAgent.chat(userId, message);
             result.put("success", true);
             result.put("response", response);
@@ -101,13 +145,11 @@ public class MusicController {
         return result;
     }
 
-    // 查询当前用户的历史记录
     @GetMapping("/history")
     public List<MusicHistory> getHistory() {
         return historyRepository.findByUsernameOrderByCreatedAtDesc(getCurrentUsername());
     }
 
-    // 下载MIDI文件
     @GetMapping("/download")
     public ResponseEntity<FileSystemResource> download(@RequestParam String path) {
         File file = new File(path);

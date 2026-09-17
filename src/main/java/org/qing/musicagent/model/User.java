@@ -17,7 +17,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password; // 存加密后的密码，明文密码绝对不能存数据库
+    private String password;
 
     @Column(unique = true)
     private String email;

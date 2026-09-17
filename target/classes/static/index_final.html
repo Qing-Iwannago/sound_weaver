@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>声织 · SoundWeaver</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Inter', sans-serif; background:#1a1208; color:#f0ede8; height:100vh; overflow:hidden; }
+canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:#c8a97e33; border-radius:4px; }
+
+nav { position:fixed; top:0; left:0; right:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 32px; background:#1a1208ee; backdrop-filter:blur(12px); border-bottom:1px solid #ffffff0a; }
+.nav-logo { font-size:14px; letter-spacing:0.15em; color:#c8a97e; font-weight:500; }
+.nav-links { display:flex; gap:24px; }
+.nav-link { font-size:13px; color:#ffffff44; cursor:pointer; transition:color 0.2s; }
+.nav-link:hover { color:#c8a97e; }
+
+/* 首页 */
+#homePage { position:relative; z-index:1; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 20px; padding-top:60px; }
+.hero-tag { font-size:11px; letter-spacing:0.2em; color:#c8a97e88; text-transform:uppercase; margin-bottom:20px; border:1px solid #c8a97e22; padding:5px 14px; border-radius:20px; }
+.hero-title { font-size:clamp(32px,5vw,56px); font-weight:300; text-align:center; line-height:1.15; margin-bottom:12px; color:#f0ede8; }
+.hero-title em { font-style:italic; color:#c8a97e; }
+.hero-sub { font-size:14px; color:#ffffff55; text-align:center; max-width:420px; line-height:1.8; margin-bottom:36px; }
+.input-card { width:100%; max-width:560px; background:#251a0c; border:1px solid #3a2a18; border-radius:18px; padding:20px; }
+.input-card textarea { width:100%; background:none; border:none; outline:none; color:#f0ede8; font-size:14px; line-height:1.7; resize:none; height:72px; font-family:inherit; }
+.input-card textarea::placeholder { color:#ffffff22; }
+.divider { height:1px; background:#3a2a18; margin:12px 0; }
+.input-actions { display:flex; justify-content:space-between; align-items:center; }
+.inst-group { display:flex; gap:6px; }
+.inst-btn { background:none; border:1px solid #3a2a18; border-radius:8px; padding:6px 12px; color:#ffffff44; font-size:12px; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.inst-btn.active, .inst-btn:hover { border-color:#c8a97e55; color:#c8a97e; background:#c8a97e0a; }
+.gen-btn { background:#c8a97e; border:none; border-radius:10px; padding:9px 24px; color:#1a1208; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+.gen-btn:hover { background:#d4b88e; }
+
+/* 结果页 */
+#resultPage { display:none; position:relative; z-index:1; height:100vh; padding-top:52px; }
+.result-header { padding:16px 28px 12px; flex-shrink:0; }
+.back-btn { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#c8a97e66; cursor:pointer; margin-bottom:12px; transition:color 0.2s; }
+.back-btn:hover { color:#c8a97e; }
+.result-title { font-size:24px; font-weight:300; color:#f0ede8; margin-bottom:8px; }
+.meta-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.meta-chip { background:#251a0c; border:1px solid #3a2a18; border-radius:6px; padding:3px 10px; font-size:11px; color:#ffffff44; }
+.meta-chip span { color:#c8a97e; font-weight:500; }
+
+/* 三格布局 */
+/* 外层用flex布局，左边内容+右边对话框 */
+.result-body { display:flex; gap:12px; padding:0 28px 20px; height:calc(100vh - 52px - 105px); align-items:stretch; }
+
+/* 左边两列+播放器用grid */
+.left-content { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 72px; gap:12px; min-width:0; }
+
+.panel { background:#251a0c; border:1px solid #3a2a18; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
+.panel-header { padding:16px 20px 12px; border-bottom:1px solid #3a2a18; flex-shrink:0; }
+.panel-label { font-size:10px; letter-spacing:0.18em; color:#c8a97e66; text-transform:uppercase; }
+.panel-body { flex:1; overflow-y:auto; padding:16px 20px; }
+
+/* 播放器横跨两列 */
+.player-row { grid-column:1/3; background:#251a0c; border:1px solid #3a2a18; border-radius:16px; padding:12px 20px; display:flex; align-items:center; }
+
+/* 对话框右侧全高 */
+.chat-panel { width:380px; flex-shrink:0; background:#1e1510; border:1px solid #3a2a18; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; align-self:stretch; }
+
+/* 和弦面板 */
+.chord-list { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.chord-tag { background:#1a1208; border:1px solid #c8a97e33; border-radius:8px; padding:6px 14px; color:#c8a97e; font-size:13px; cursor:pointer; transition:all 0.2s; }
+.chord-tag:hover, .chord-tag.active { background:#c8a97e15; border-color:#c8a97e88; }
+.chord-diag { display:none; }
+.chord-diag.show { display:block; }
+.chord-name-big { font-size:16px; color:#c8a97e; margin-bottom:10px; font-weight:400; }
+.diag-inner { display:flex; gap:16px; align-items:flex-start; }
+.diag-desc { font-size:11px; color:#ffffff44; line-height:1.9; }
+.fretboard-grid { display:grid; grid-template-columns:repeat(4,22px); grid-template-rows:repeat(5,18px); border-left:2px solid #c8a97e66; border-top:2px solid #c8a97e66; }
+.fret-cell { border-right:1px solid #c8a97e22; border-bottom:1px solid #c8a97e22; display:flex; align-items:center; justify-content:center; }
+.dot { width:10px; height:10px; background:#c8a97e; border-radius:50%; }
+.open-mute { display:flex; margin-bottom:3px; }
+.om-mark { width:22px; text-align:center; font-size:10px; color:#ffffff33; }
+.om-mark.open { color:#c8a97e; }
+.fret-labels { display:flex; flex-direction:column; margin-right:4px; }
+.fret-label { height:18px; font-size:8px; color:#ffffff22; display:flex; align-items:center; }
+
+/* 播放器 */
+
+.player-inner { display:flex; align-items:center; gap:12px; }
+.vinyl { width:40px; height:40px; border-radius:50%; background:conic-gradient(#2a1e10 0deg,#3d2c1a 90deg,#2a1e10 180deg,#3d2c1a 270deg); border:2px solid #c8a97e33; position:relative; flex-shrink:0; }
+.vinyl-dot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:8px; height:8px; background:#c8a97e; border-radius:50%; }
+.vinyl.spin { animation:spin 3s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.play-btn { width:36px; height:36px; background:#c8a97e; border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 0.2s; }
+.play-btn:hover { transform:scale(1.05); }
+.tri { width:0; height:0; border:5px solid transparent; border-left:11px solid #1a1208; margin-left:2px; }
+.bars { display:flex; gap:3px; align-items:center; }
+.bar { width:3px; height:10px; background:#1a1208; border-radius:2px; }
+.player-mid { flex:1; min-width:0; }
+.player-name { font-size:12px; color:#f0ede8; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.player-info { font-size:10px; color:#c8a97e66; }
+.prog-track { flex:1; height:2px; background:#3a2a18; border-radius:2px; }
+.prog-fill { height:100%; background:#c8a97e; border-radius:2px; width:0%; transition:width 0.1s; }
+
+/* 歌词面板 */
+.lyrics-text { color:#f0ede8aa; font-size:14px; line-height:2.4; white-space:pre-wrap; }
+
+/* 对话面板 */
+.chat-panel { background:#1e1510; border:1px solid #3a2a18; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
+.chat-header { padding:16px 20px 12px; border-bottom:1px solid #3a2a18; flex-shrink:0; }
+.chat-title { font-size:12px; color:#c8a97e; letter-spacing:0.05em; }
+.chat-sub { font-size:10px; color:#ffffff33; margin-top:2px; }
+.chat-messages { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+.msg { max-width:92%; }
+.msg-ai { align-self:flex-start; }
+.msg-user { align-self:flex-end; }
+.msg-bubble { padding:8px 12px; border-radius:12px; font-size:12px; line-height:1.7; }
+.msg-ai .msg-bubble { background:#251a0c; border:1px solid #3a2a18; color:#f0ede8aa; border-radius:4px 12px 12px 12px; }
+.msg-user .msg-bubble { background:#c8a97e22; border:1px solid #c8a97e33; color:#f0ede8; border-radius:12px 4px 12px 12px; }
+.msg-time { font-size:10px; color:#ffffff22; margin-top:3px; }
+.msg-ai .msg-time { text-align:left; }
+.msg-user .msg-time { text-align:right; }
+.chat-footer { padding:10px 12px; border-top:1px solid #3a2a18; flex-shrink:0; }
+.chat-input-row { display:flex; gap:8px; align-items:center; }
+.chat-input-row textarea { flex:1; background:#251a0c; border:1px solid #3a2a18; border-radius:10px; padding:8px 12px; color:#f0ede8; font-size:12px; resize:none; height:36px; font-family:inherit; outline:none; transition:border-color 0.2s; }
+.chat-input-row textarea:focus { border-color:#c8a97e44; }
+.chat-input-row textarea::placeholder { color:#ffffff22; }
+.send-btn { width:32px; height:32px; background:#c8a97e; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.send-btn:hover { background:#d4b88e; }
+.send-icon { width:0; height:0; border:4px solid transparent; border-left:9px solid #1a1208; margin-left:2px; }
+.typing { display:flex; gap:4px; padding:2px 0; }
+.typing-dot { width:4px; height:4px; background:#c8a97e66; border-radius:50%; animation:bop 1.2s ease-in-out infinite; }
+.typing-dot:nth-child(2){animation-delay:.2s;} .typing-dot:nth-child(3){animation-delay:.4s;}
+
+.loading-full { position:absolute; top:52px; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:5; background:#1a1208; }
+.dots { display:flex; gap:8px; margin-bottom:12px; }
+.dot { width:5px; height:5px; background:#c8a97e; border-radius:50%; animation:bop 1.2s ease-in-out infinite; }
+.dot:nth-child(2){animation-delay:.2s;} .dot:nth-child(3){animation-delay:.4s;}
+@keyframes bop{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}
+.load-text { color:#ffffff33; font-size:13px; }
+
+/* 弹窗遮罩 */
+.modal-mask { position:fixed; top:0; left:0; right:0; bottom:0; background:#00000088; z-index:100; display:none; align-items:center; justify-content:center; }
+.modal-mask.show { display:flex; }
+.modal-box { background:#251a0c; border:1px solid #3a2a18; border-radius:20px; padding:36px; width:360px; }
+.modal-title { font-size:18px; font-weight:300; color:#f0ede8; margin-bottom:8px; text-align:center; }
+.modal-sub { font-size:12px; color:#ffffff44; text-align:center; margin-bottom:28px; }
+.modal-btn { width:100%; padding:14px; border-radius:12px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; margin-bottom:10px; border:none; }
+.modal-btn-guest { background:#251a0c; border:1px solid #c8a97e44; color:#c8a97e; }
+.modal-btn-guest:hover { background:#c8a97e15; border-color:#c8a97e88; }
+.modal-btn-login { background:#c8a97e; color:#1a1208; }
+.modal-btn-login:hover { background:#d4b88e; }
+.modal-count { font-size:11px; color:#ffffff33; text-align:center; margin-top:4px; margin-bottom:16px; }
+.modal-close { display:block; text-align:center; font-size:12px; color:#ffffff33; cursor:pointer; margin-top:12px; }
+.modal-close:hover { color:#c8a97e; }
+
+/* 次数提示 */
+.usage-bar { position:fixed; top:60px; right:32px; z-index:9; background:#251a0c; border:1px solid #3a2a18; border-radius:8px; padding:6px 14px; font-size:11px; color:#ffffff44; display:none; }
+.usage-bar.show { display:block; }
+.usage-bar span { color:#c8a97e; }
+
+/* 登录注册页 */
+#authPage { position:relative; z-index:1; height:100vh; display:none; flex-direction:column; align-items:center; justify-content:center; padding:0 20px; }
+.auth-box { width:100%; max-width:400px; background:#251a0c; border:1px solid #3a2a18; border-radius:20px; padding:40px; }
+.auth-logo { font-size:13px; letter-spacing:0.15em; color:#c8a97e; text-align:center; margin-bottom:8px; }
+.auth-title { font-size:22px; font-weight:300; color:#f0ede8; text-align:center; margin-bottom:28px; }
+.auth-tabs { display:flex; background:#1a1208; border-radius:10px; padding:4px; margin-bottom:24px; }
+.auth-tab { flex:1; padding:8px; text-align:center; font-size:13px; color:#ffffff44; cursor:pointer; border-radius:8px; transition:all 0.2s; }
+.auth-tab.active { background:#3a2a18; color:#c8a97e; }
+.auth-input { width:100%; background:#1a1208; border:1px solid #3a2a18; border-radius:10px; padding:12px 16px; color:#f0ede8; font-size:14px; font-family:inherit; outline:none; margin-bottom:12px; transition:border-color 0.2s; }
+.auth-input:focus { border-color:#c8a97e44; }
+.auth-input::placeholder { color:#ffffff22; }
+.auth-submit { width:100%; padding:13px; background:#c8a97e; border:none; border-radius:10px; color:#1a1208; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; margin-top:4px; }
+.auth-submit:hover { background:#d4b88e; }
+.auth-back { display:block; text-align:center; font-size:12px; color:#ffffff33; cursor:pointer; margin-top:16px; transition:color 0.2s; }
+.auth-back:hover { color:#c8a97e; }
+.auth-err { font-size:12px; color:#e88; text-align:center; margin-bottom:12px; display:none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<nav>
+  <div class="nav-logo">声织</div>
+  <div class="nav-links">
+    <div class="nav-link" onclick="showPage('home')">创作</div>
+    <div class="nav-link">历史</div>
+    <div class="nav-link">关于</div>
+  </div>
+</nav>
+
+
+<!-- 选择弹窗 -->
+<div class="modal-mask" id="choiceModal">
+  <div class="modal-box">
+    <div class="modal-title">开始创作</div>
+    <div class="modal-sub">选择你的方式</div>
+    <button class="modal-btn modal-btn-guest" onclick="startAsGuest()">游客体验</button>
+    <div class="modal-count">今日剩余 <span id="guestCount">8</span> 次</div>
+    <button class="modal-btn modal-btn-login" onclick="showAuth('login')">登录 / 注册</button>
+    <div class="modal-count">登录后每天 30 次</div>
+    <span class="modal-close" onclick="closeModal()">取消</span>
+  </div>
+</div>
+
+<!-- 次数提示 -->
+<div class="usage-bar" id="usageBar">今日剩余 <span id="usageCount">8</span> 次</div>
+
+<!-- 登录注册页 -->
+<div id="authPage">
+  <div class="auth-box">
+    <div class="auth-logo">声织</div>
+    <div class="auth-title" id="authTitle">欢迎回来</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">登录</div>
+      <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">注册</div>
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <input class="auth-input" id="authUsername" type="text" placeholder="用户名">
+    <input class="auth-input" id="authPassword" type="password" placeholder="密码">
+    <button class="auth-submit" onclick="submitAuth()">登录</button>
+    <span class="auth-back" onclick="showPage('home')">← 返回首页</span>
+  </div>
+</div>
+
+<div id="homePage">
+  <div class="hero-tag">灵感落地，音乐成形</div>
+  <h1 class="hero-title">用一句话<br>写一首<em>属于你</em>的歌</h1>
+  <p class="hero-sub">描述情绪与风格，AI 自动生成和弦、歌词与 MIDI 伴奏，为创作型音乐爱好者及博主提供灵感起点。你的每一种情绪，都值得成为音符</p>
+  <div class="input-card">
+    <textarea id="desc" placeholder="一首忧郁的失恋慢歌，有点爵士的感觉..."></textarea>
+    <div class="divider"></div>
+    <div class="input-actions">
+      <div class="inst-group">
+        <button class="inst-btn active" onclick="selInst(this)">钢琴</button>
+        <button class="inst-btn" onclick="selInst(this)">木吉他</button>
+        <button class="inst-btn" onclick="selInst(this)">电吉他</button>
+      </div>
+      <button class="gen-btn" onclick="onGenClick()">生成灵感 →</button>
+    </div>
+  </div>
+</div>
+
+<div id="resultPage">
+  <div id="loadingFull" class="loading-full">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="load-text">AI 正在创作中...</div>
+  </div>
+  <div id="mainContent" style="display:none;">
+    <!-- 整体flex横排，对话框占全高 -->
+    <div style="display:flex; gap:12px; padding:0 28px 20px; height:calc(100vh - 52px); align-items:flex-end;">
+
+      <!-- 左边大块：标题+三个区域 -->
+      <div style="flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; height:100%;">
+
+        <!-- 标题区 -->
+        <div style="flex-shrink:0; padding-top:16px;">
+          <div class="back-btn" onclick="showPage('home')">← 重新创作</div>
+          <div class="result-title" id="rTitle"></div>
+          <div class="meta-row" id="rMeta"></div>
+        </div>
+
+        <!-- 和弦+歌词两列 -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:1; min-height:0;">
+          <!-- 和弦 -->
+          <div class="panel">
+            <div class="panel-header"><div class="panel-label">和弦进行</div></div>
+            <div class="panel-body">
+              <div class="chord-list" id="rChords"></div>
+              <div class="chord-diag" id="chordDiag">
+                <div class="chord-name-big" id="diagName"></div>
+                <div class="diag-inner">
+                  <div id="guitarDiag">
+                    <div class="open-mute" id="diagOM"></div>
+                    <div style="display:flex;gap:4px;">
+                      <div class="fret-labels" id="diagFrets"></div>
+                      <div class="fretboard-grid" id="diagGrid"></div>
+                    </div>
+                  </div>
+                  <div id="pianoDiag" style="display:none;">
+                    <svg id="pianoSvg" width="150" height="85" viewBox="0 0 150 85"></svg>
+                  </div>
+                  <div class="diag-desc" id="diagDesc"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 歌词 -->
+          <div class="panel">
+            <div class="panel-header"><div class="panel-label">歌词</div></div>
+            <div class="panel-body">
+              <div class="lyrics-text" id="rLyrics"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 播放器 -->
+        <div class="panel" style="flex-shrink:0; padding:14px 20px;">
+          <div class="player-inner">
+            <div class="vinyl" id="vinyl"><div class="vinyl-dot"></div></div>
+            <button class="play-btn" onclick="togglePlay()" style="margin:0 12px;"><div class="tri" id="playIcon"></div></button>
+            <div class="player-mid">
+              <div class="player-name" id="pName">准备播放</div>
+              <div class="player-info" id="pInfo">点击播放 MIDI 伴奏</div>
+            </div>
+            <div class="prog-track" style="flex:1;"><div class="prog-fill" id="prog"></div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右边：对话框全高，从nav到底 -->
+      <div class="chat-panel" style="width:380px; flex-shrink:0; height:100%; padding-bottom:0;">
+        <div class="chat-header">
+          <div class="chat-title">与声织对话</div>
+          <div class="chat-sub">修改歌词、调整风格、解释和弦...</div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="msg msg-ai">
+            <div class="msg-bubble">你好！我已经为你生成了这首曲子，有什么想修改的吗？</div>
+            <div class="msg-time">刚刚</div>
+          </div>
+        </div>
+        <div class="chat-footer">
+          <div class="chat-input-row">
+            <textarea id="chatInput" placeholder="问我任何关于这首歌的问题..." onkeydown="handleKey(event)"></textarea>
+            <button class="send-btn" onclick="sendChat()"><div class="send-icon"></div></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+let W,H,ns=[];
+const NC=['♩','♪','♫','♬','𝄞','𝄢','♭','♮','♯'];
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+function init(){ns=[];for(let i=0;i<Math.floor(W/65);i++)ns.push({x:Math.random()*W,y:Math.random()*H-H,spd:0.4+Math.random()*0.7,sz:11+Math.random()*13,ch:NC[~~(Math.random()*NC.length)],op:0.15+Math.random()*0.2,dx:(Math.random()-.5)*.3,rot:Math.random()*Math.PI*2,rs:(Math.random()-.5)*.012});}
+function frame(){cx.clearRect(0,0,W,H);ns.forEach(n=>{cx.save();cx.translate(n.x,n.y);cx.rotate(n.rot);cx.font=`${n.sz}px serif`;cx.fillStyle=`rgba(215,205,190,${n.op})`;cx.fillText(n.ch,0,0);cx.restore();n.y+=n.spd;n.x+=n.dx;n.rot+=n.rs;if(n.y>H+30){n.y=-30;n.x=Math.random()*W;}});requestAnimationFrame(frame);}
+resize();init();frame();window.addEventListener('resize',()=>{resize();init();});
+
+function selInst(el){document.querySelectorAll('.inst-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function showPage(p){document.getElementById('homePage').style.display=p==='home'?'flex':'none';document.getElementById('resultPage').style.display=p==='result'?'block':'none';document.getElementById('authPage').style.display='none';}
+
+const CHORDS={
+  'Am':{fingers:[[],[0,0,1,2,2,1]],desc:'根音 A\n小三和弦\n忧郁、深情',open:['x','o','o','o']},
+  'Dm':{fingers:[[],[2,3,2,0,'x','x']],desc:'根音 D\n小三和弦\n哀愁、内敛',open:['x','x','o','o']},
+  'G7':{fingers:[[],[1,0,0,0,2,1]],desc:'根音 G\n属七和弦\n制造张力',open:['o','o','o','o']},
+  'Cmaj7':{fingers:[[],[0,0,0,2,3,0]],desc:'根音 C\n大七和弦\n温暖、飘逸',open:['x','3','2','0']},
+  'C':{fingers:[[],[0,1,0,2,3,'x']],desc:'根音 C\n大三和弦\n明亮、开朗',open:['x','3','2','0']},
+  'G':{fingers:[[],[2,0,0,0,1,2]],desc:'根音 G\n大三和弦\n温暖、自然',open:['3','2','0','0']},
+  'Em':{fingers:[[],[0,0,0,0,2,2]],desc:'根音 E\n小三和弦\n深沉、内省',open:['0','0','0','2']},
+  'F':{fingers:[[],[1,1,2,3,3,1]],desc:'根音 F\n大三和弦\n封闭和弦',open:['1','1','2','3']}
+};
+const PIANO_NOTES={'Am':[57,60,64],'Dm':[62,65,69],'G7':[55,59,62,65],'Cmaj7':[60,64,67,71],'C':[60,64,67],'G':[55,59,62],'Em':[52,55,59],'F':[53,57,60]};
+
+function drawPianoSvg(name){
+  const svg=document.getElementById('pianoSvg');svg.innerHTML='';
+  const notes=PIANO_NOTES[name]||[];
+  const ww=18,wh=56,bw=11,bh=34;
+  const wo=[0,2,4,5,7,9,11],wn=['C','D','E','F','G','A','B'];
+  const bo=[1,3,6,8,10],bx=[0.65,1.65,3.65,4.65,5.65];
+  const mk=(tag,attrs)=>{const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;};
+  wo.forEach((offset,i)=>{
+    const note=60+offset,active=notes.includes(note);
+    svg.appendChild(mk('rect',{x:i*ww+1,y:14,width:ww-2,height:wh,rx:2,fill:active?'#c8a97e':'#2a2218',stroke:'#c8a97e33','stroke-width':1}));
+    const t=mk('text',{x:i*ww+ww/2,y:14+wh-5,'text-anchor':'middle','font-size':7,fill:active?'#1a1208':'#ffffff22'});
+    t.textContent=wn[i];svg.appendChild(t);
+  });
+  bo.forEach((offset,i)=>{
+    const note=60+offset,active=notes.includes(note);
+    svg.appendChild(mk('rect',{x:bx[i]*ww+1-bw/2,y:14,width:bw,height:bh,rx:2,fill:active?'#c8a97e':'#1a1208',stroke:'#c8a97e22','stroke-width':1}));
+  });
+  const t=mk('text',{x:0,y:10,'font-size':8,fill:'#ffffff22'});t.textContent='C4 八度';svg.appendChild(t);
+}
+
+function showChordDiagram(name,el){
+  document.querySelectorAll('.chord-tag').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const chord=CHORDS[name];
+  document.getElementById('chordDiag').classList.add('show');
+  document.getElementById('diagName').textContent=name;
+  document.getElementById('diagDesc').innerHTML=(chord?.desc||'').replace(/\n/g,'<br>');
+  const isPiano=document.querySelector('.inst-btn.active').textContent==='钢琴';
+  document.getElementById('guitarDiag').style.display=isPiano?'none':'block';
+  document.getElementById('pianoDiag').style.display=isPiano?'block':'none';
+  if(isPiano){setTimeout(()=>drawPianoSvg(name),30);return;}
+  const grid=document.getElementById('diagGrid');grid.innerHTML='';
+  for(let f=1;f<=5;f++){for(let s=0;s<4;s++){const cell=document.createElement('div');cell.className='fret-cell';if(chord&&Array.isArray(chord.fingers[1])){const v=chord.fingers[1][s];if(typeof v==='number'&&v===f){const dot=document.createElement('div');dot.className='dot';cell.appendChild(dot);}}grid.appendChild(cell);}}
+  const fl=document.getElementById('diagFrets');fl.innerHTML='';
+  for(let f=1;f<=5;f++){const l=document.createElement('div');l.className='fret-label';l.textContent=f;fl.appendChild(l);}
+  const om=document.getElementById('diagOM');
+  om.innerHTML=(chord?.open||['o','o','o','o']).slice(0,4).map(v=>`<div class="om-mark ${v==='x'?'':'open'}">${v==='o'?'○':v==='x'?'×':v}</div>`).join('');
+}
+
+let playing=false,pTimer=null;
+function togglePlay(){playing=!playing;const v=document.getElementById('vinyl'),pi=document.getElementById('playIcon');if(playing){v.classList.add('spin');pi.outerHTML='<div class="bars" id="playIcon"><div class="bar"></div><div class="bar"></div></div>';document.getElementById('pInfo').textContent='正在播放...';let p=0;pTimer=setInterval(()=>{p+=0.4;document.getElementById('prog').style.width=p+'%';if(p>=100){clearInterval(pTimer);stopPlay();}},120);}else stopPlay();}
+function stopPlay(){playing=false;clearInterval(pTimer);document.getElementById('vinyl').classList.remove('spin');const pi=document.getElementById('playIcon');if(pi)pi.outerHTML='<div class="tri" id="playIcon"></div>';document.getElementById('pInfo').textContent='点击播放 MIDI 伴奏';document.getElementById('prog').style.width='0%';}
+
+function addMsg(text,isUser){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className=`msg msg-${isUser?'user':'ai'}`;
+  const now=new Date();
+  const time=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  div.innerHTML=`<div class="msg-bubble">${text}</div><div class="msg-time">${time}</div>`;
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+function showTyping(){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className='msg msg-ai';div.id='typingMsg';
+  div.innerHTML='<div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+async function sendChat(){
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text) return;
+  addMsg(text,true);
+  input.value='';
+  showTyping();
+  try {
+    const url = currentUser ? '/music/chat' : '/music/chat/guest';
+    const headers = {'Content-Type':'application/x-www-form-urlencoded'};
+    if(currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
+    const res = await fetch(url, {
+      method:'POST', headers,
+      body:`message=${encodeURIComponent(text)}`
+    });
+    const data = await res.json();
+    document.getElementById('typingMsg')?.remove();
+    addMsg(data.success ? data.response : '抱歉，出了点问题，请重试', false);
+  } catch(e) {
+    document.getElementById('typingMsg')?.remove();
+    addMsg('网络错误，请重试', false);
+  }
+}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+
+let currentDesc = '';
+let isGuest = true;
+
+async function generate(){
+  const desc = document.getElementById('desc').value.trim();
+  if(!desc) return;
+  currentDesc = desc;
+  const inst = document.querySelector('.inst-btn.active').textContent;
+  showPage('result');
+  document.getElementById('loadingFull').style.display='flex';
+  document.getElementById('mainContent').style.display='none';
+
+  try {
+    // 判断游客还是登录用户
+    const url = currentUser ? '/music/create' : '/music/create/guest';
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: `description=${encodeURIComponent(desc)}`
+    });
+    const d = await res.json();
+
+    if (!d.success) {
+      if (d.limitReached) {
+        alert('今日游客次数已用完，请登录后继续使用');
+        showPage('home');
+        showAuth('login');
+        return;
+      }
+      throw new Error(d.error || '生成失败');
+    }
+
+    // 更新剩余次数
+    if (d.remaining !== undefined) {
+      if (currentUser) currentUser.remaining = d.remaining;
+      updateUsageBar();
+    }
+
+    const params = d.params;
+    document.getElementById('loadingFull').style.display='none';
+    document.getElementById('mainContent').style.display='block';
+    document.getElementById('rTitle').textContent=`${params.mood}的${params.genre}风`;
+    document.getElementById('rMeta').innerHTML=[
+      `调式 <span>${params.key}</span>`,
+      `BPM <span>${params.bpm}</span>`,
+      `乐器 <span>${inst}</span>`
+    ].map(t=>`<div class="meta-chip">${t}</div>`).join('');
+    document.getElementById('rChords').innerHTML=params.chords.split(' - ').map(c=>`<div class="chord-tag" onclick="showChordDiagram('${c}',this)">${c}</div>`).join('');
+    document.getElementById('rLyrics').textContent=params.lyrics;
+    document.getElementById('pName').textContent=`${params.mood}${params.genre} · ${inst}`;
+    if(d.downloadUrl) document.getElementById('midiUrl').value = d.downloadUrl;
+    document.querySelector('.chord-tag').click();
+
+  } catch(e) {
+    alert('生成失败：' + e.message);
+    showPage('home');
+  }
+}
+
+// ========== 用户状态 ==========
+let currentUser = null; // null=游客
+let authMode = 'login';
+
+function getGuestCount() {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('guestUsage') || '{}');
+  if (data.date !== today) return 8;
+  return Math.max(0, 8 - (data.count || 0));
+}
+
+function useGuestCount() {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('guestUsage') || '{}');
+  const count = data.date === today ? (data.count || 0) + 1 : 1;
+  localStorage.setItem('guestUsage', JSON.stringify({ date: today, count }));
+}
+
+function updateUsageBar() {
+  const bar = document.getElementById('usageBar');
+  const countEl = document.getElementById('usageCount');
+  if (currentUser) {
+    bar.classList.add('show');
+    countEl.textContent = currentUser.remaining;
+  } else {
+    const cnt = getGuestCount();
+    if (cnt < 8) {
+      bar.classList.add('show');
+      countEl.textContent = cnt;
+    }
+  }
+}
+
+// ========== 弹窗控制 ==========
+function onGenClick() {
+  const desc = document.getElementById('desc').value.trim();
+  if (!desc) return;
+  if (currentUser) { generate(); return; }
+  // 游客直接检查次数
+  const cnt = getGuestCount();
+  document.getElementById('guestCount').textContent = cnt;
+  document.getElementById('choiceModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('choiceModal').classList.remove('show');
+}
+
+function startAsGuest() {
+  const cnt = getGuestCount();
+  if (cnt <= 0) {
+    alert('今日游客次数已用完，请登录后继续使用');
+    closeModal();
+    showAuth('login');
+    return;
+  }
+  useGuestCount();
+  closeModal();
+  updateUsageBar();
+  generate();
+}
+
+// ========== 登录注册 ==========
+function showAuth(mode) {
+  closeModal();
+  authMode = mode;
+  document.getElementById('homePage').style.display = 'none';
+  document.getElementById('resultPage').style.display = 'none';
+  document.getElementById('authPage').style.display = 'flex';
+  switchTab(mode);
+}
+
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tabLogin').className = 'auth-tab' + (mode==='login'?' active':'');
+  document.getElementById('tabRegister').className = 'auth-tab' + (mode==='register'?' active':'');
+  document.getElementById('authTitle').textContent = mode==='login' ? '欢迎回来' : '创建账号';
+  document.getElementById('authSubmit') && (document.querySelector('.auth-submit').textContent = mode==='login' ? '登录' : '注册');
+  document.querySelector('.auth-submit').textContent = mode==='login' ? '登录' : '注册';
+  document.getElementById('authErr').style.display = 'none';
+}
+
+async function submitAuth() {
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  const errEl = document.getElementById('authErr');
+  if (!username || !password) { errEl.textContent = '请填写用户名和密码'; errEl.style.display='block'; return; }
+
+  try {
+    const url = authMode === 'login' ? '/auth/login' : '/auth/register';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentUser = { username: data.username, token: data.token, remaining: data.remaining || 30 };
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('username', data.username);
+      showPage('home');
+      updateUsageBar();
+    } else {
+      errEl.textContent = data.error || '操作失败，请重试';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = '网络错误，请重试';
+    errEl.style.display = 'block';
+  }
+}
+
+// 检查本地token
+function checkLocalToken() {
+  const token = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
+  if (token && username) {
+    currentUser = { username, token, remaining: 30 };
+    updateUsageBar();
+  }
+}
+checkLocalToken();
+
+</script>
+</body>
+</html>

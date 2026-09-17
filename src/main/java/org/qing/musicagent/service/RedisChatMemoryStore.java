@@ -68,13 +68,18 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
     }
 
     // 保存对话历史，每次AI回复后LangChain4j自动执行
+    @Autowired
+    private ChatSummaryService chatSummaryService; // 注入摘要服务
+
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
         String key = buildKey(memoryId);
 
         try {
-            // ChatMessage列表转成Map列表，方便序列化
-            List<Map<String, String>> list = messages.stream().map(message -> {
+            //保存前先压缩
+            List<ChatMessage> compressed = chatSummaryService.compressIfNeeded(messages);
+
+            List<Map<String, String>> list = compressed.stream().map(message -> {
                 Map<String, String> map = new HashMap<>();
                 map.put("role", message.type() == ChatMessageType.USER ? "user" : "assistant");
                 map.put("content", message.type() == ChatMessageType.USER
@@ -82,8 +87,7 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
                         : ((AiMessage) message).text());
                 return map;
             }).collect(Collectors.toList());
-
-            // 序列化成JSON存入Redis，同时重置7天过期时间
+            //七天过期
             String json = objectMapper.writeValueAsString(list);
             redisTemplate.opsForValue().set(key, json, EXPIRE_DAYS, TimeUnit.DAYS);
 
