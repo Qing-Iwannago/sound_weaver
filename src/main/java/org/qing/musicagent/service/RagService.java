@@ -15,7 +15,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,7 +36,10 @@ public class RagService {
 
         // 读取txt知识库文件
         ClassPathResource resource = new ClassPathResource("music-knowledge.txt");
-        String content = new String(Files.readAllBytes(resource.getFile().toPath()));
+        String content;
+        try (InputStream stream = resource.getInputStream()) {
+            content = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
 
         // 把整个txt包装成Document
         Document document = Document.from(content);

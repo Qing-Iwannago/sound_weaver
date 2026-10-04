@@ -901,6 +901,12 @@ public class MusicController {
                 new File(file)
                         .getName();
 
+        if (!file.equals(safeFileName) ||
+                !(safeFileName.toLowerCase().endsWith(".mid") ||
+                        safeFileName.toLowerCase().endsWith(".midi"))) {
+            return ResponseEntity.badRequest().build();
+        }
+
 
         File target =
                 new File(
@@ -943,50 +949,6 @@ public class MusicController {
                 );
 
 
-        String name =
-                target
-                        .getName()
-                        .toLowerCase();
-
-
-        MediaType type;
-
-
-        if (
-                name.endsWith(".mid") ||
-                        name.endsWith(".midi")
-        ) {
-
-            type =
-                    MediaType.parseMediaType(
-                            "audio/midi"
-                    );
-
-        } else if (
-                name.endsWith(".mp3")
-        ) {
-
-            type =
-                    MediaType.parseMediaType(
-                            "audio/mpeg"
-                    );
-
-        } else if (
-                name.endsWith(".wav")
-        ) {
-
-            type =
-                    MediaType.parseMediaType(
-                            "audio/wav"
-                    );
-
-        } else {
-
-            type =
-                    MediaType.APPLICATION_OCTET_STREAM;
-        }
-
-
         return ResponseEntity
                 .ok()
                 .header(
@@ -995,7 +957,7 @@ public class MusicController {
                                 target.getName() +
                                 "\""
                 )
-                .contentType(type)
+                .contentType(MediaType.parseMediaType("audio/midi"))
                 .contentLength(
                         target.length()
                 )

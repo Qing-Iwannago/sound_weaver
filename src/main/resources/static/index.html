@@ -1563,7 +1563,7 @@ function createBrowserSynth(instrument) {
     return synth;
   }
 
-  // 默认钢琴感：仍为合成音色，后续再换 SoundFont/Sampler
+  // 默认钢琴感：使用浏览器合成音色
   const synth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.006, decay: 0.35, sustain: 0.18, release: 0.65 }

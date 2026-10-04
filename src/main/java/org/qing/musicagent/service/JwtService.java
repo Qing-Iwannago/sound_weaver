@@ -4,19 +4,22 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
 @Service
 public class JwtService {
 
-    private static final String SECRET = "sound-weaver-secret-key-2024-very-long-string-for-security";
+    @Value("${JWT_SECRET}")
+    private String secret;
     private static final long EXPIRATION = 7 * 24 * 60 * 60 * 1000L;
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(String username) {
