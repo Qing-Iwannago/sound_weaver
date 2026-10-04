@@ -5,7 +5,7 @@
 | 文件 | 说明 |
 |------|------|
 | config/SecurityConfig.java | 放行游客接口，登录接口JWT鉴权 |
-| config/AgentConfig.java | 内存存储，不用Redis，按userId隔离对话 |
+| config/AgentConfig.java | 内存存储 |
 | config/JwtFilter.java | JWT过滤器 |
 | config/CorsConfig.java | 跨域配置 |
 | controller/MusicController.java | 游客8次/登录用户30次，接口分开 |
@@ -25,5 +25,3 @@
 - 登录：POST /auth/login
 - 注册：POST /auth/register
 
-## 不需要Redis
-对话历史存在内存，重启清空，演示够用
