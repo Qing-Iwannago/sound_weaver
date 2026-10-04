@@ -25,18 +25,54 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/music/create/guest").permitAll()
-                .requestMatchers("/music/chat/guest").permitAll()
-                .requestMatchers("/", "/index_final.html", "/static/**").permitAll()
-                .requestMatchers("/music/**").authenticated()
-                .anyRequest().permitAll()
-            )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+
+                .sessionManagement(
+                        s -> s.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .authorizeHttpRequests(auth -> auth
+
+                        // 登录注册
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // 游客生成
+                        .requestMatchers("/music/create/guest").permitAll()
+
+                        // 游客聊天
+                        .requestMatchers("/music/chat/guest").permitAll()
+
+                        // 游客修改后重新生成 MIDI
+                        .requestMatchers("/music/regenerate/guest").permitAll()
+
+                        // MIDI 下载 / 播放
+                        .requestMatchers("/music/download").permitAll()
+
+
+                        // 静态页面
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/index_final.html",
+                                "/static/**"
+                        ).permitAll()
+
+                        // 其他 music 接口需要登录
+                        .requestMatchers("/music/**").authenticated()
+
+                        // 其他请求放行
+                        .anyRequest().permitAll()
+                )
+
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
+
         return http.build();
     }
 }

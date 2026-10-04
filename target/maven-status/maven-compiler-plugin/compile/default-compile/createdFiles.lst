@@ -8,13 +8,16 @@ org\qing\musicagent\model\User.class
 org\qing\musicagent\controller\MusicController.class
 org\qing\musicagent\config\AgentConfig.class
 org\qing\musicagent\controller\AuthController.class
+org\qing\musicagent\service\MidiService$SectionType.class
 org\qing\musicagent\repository\ChatMemoryRepository.class
 org\qing\musicagent\service\RedisChatMemoryStore$1.class
 org\qing\musicagent\service\JwtService.class
 org\qing\musicagent\service\MusicAgent.class
+org\qing\musicagent\service\MidiService$SongSection.class
 org\qing\musicagent\repository\MusicHistoryRepository.class
 org\qing\musicagent\controller\TestController.class
 org\qing\musicagent\MusicAgentApplication.class
+org\qing\musicagent\service\MidiService$1.class
 org\qing\musicagent\service\RedisChatMemoryStore.class
 org\qing\musicagent\service\MySQLChatMemoryStore.class
 org\qing\musicagent\repository\UserRepository.class

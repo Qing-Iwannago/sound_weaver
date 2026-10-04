@@ -14,5 +14,5 @@ spring:
 ai:
   dashscope:
     api-key: a4c2fecb20594748b9f9e7a45fb7e2cf.robEqxItCzbyS3Ez
-    model: glm-4.6
+    model: glm-4-flash-250414
     base-url: https://open.bigmodel.cn/api/paas/v4/

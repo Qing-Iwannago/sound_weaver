@@ -3,328 +3,1184 @@ package org.qing.musicagent.service;
 import org.qing.musicagent.model.MusicParams;
 import org.springframework.stereotype.Service;
 
-
 import javax.sound.midi.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class MidiService {
 
-    // ============================================================
-    // 调式音阶表
-    // 每个调式都是一组音符编号，代表该调式的7个音
-    // 比如C大调：Do Re Mi Fa Sol La Si = 60 62 64 65 67 69 71
-    // ============================================================
-    private static final Map<String, int[]> KEY_SCALES = new HashMap<>();
+    private static final int PPQ = 48;
+    private static final int BAR = PPQ * 4;
+
+    private static final int CH_MELODY = 0;
+    private static final int CH_CHORD = 1;
+    private static final int CH_BASS = 2;
+    private static final int CH_DRUM = 9;
+
+    private static final Map<String, Integer> NOTE_TO_SEMITONE = new HashMap<>();
+    private static final Map<String, Integer> INSTRUMENT_PROGRAMS = new LinkedHashMap<>();
+    private static final Map<String, Integer> GENRE_PROGRAMS = new LinkedHashMap<>();
 
     static {
-        // 大调（明亮、开朗）
-        KEY_SCALES.put("C大调", new int[]{60, 62, 64, 65, 67, 69, 71});
-        KEY_SCALES.put("G大调", new int[]{67, 69, 71, 72, 74, 76, 78});
-        KEY_SCALES.put("D大调", new int[]{62, 64, 66, 67, 69, 71, 73});
-        KEY_SCALES.put("F大调", new int[]{65, 67, 69, 70, 72, 74, 76});
-        KEY_SCALES.put("A大调", new int[]{69, 71, 73, 74, 76, 78, 80});
-        KEY_SCALES.put("E大调", new int[]{64, 66, 68, 69, 71, 73, 75});
-        KEY_SCALES.put("B大调", new int[]{71, 73, 75, 76, 78, 80, 82});
+        NOTE_TO_SEMITONE.put("C", 0);
+        NOTE_TO_SEMITONE.put("C#", 1);
+        NOTE_TO_SEMITONE.put("Db", 1);
+        NOTE_TO_SEMITONE.put("D", 2);
+        NOTE_TO_SEMITONE.put("D#", 3);
+        NOTE_TO_SEMITONE.put("Eb", 3);
+        NOTE_TO_SEMITONE.put("E", 4);
+        NOTE_TO_SEMITONE.put("F", 5);
+        NOTE_TO_SEMITONE.put("F#", 6);
+        NOTE_TO_SEMITONE.put("Gb", 6);
+        NOTE_TO_SEMITONE.put("G", 7);
+        NOTE_TO_SEMITONE.put("G#", 8);
+        NOTE_TO_SEMITONE.put("Ab", 8);
+        NOTE_TO_SEMITONE.put("A", 9);
+        NOTE_TO_SEMITONE.put("A#", 10);
+        NOTE_TO_SEMITONE.put("Bb", 10);
+        NOTE_TO_SEMITONE.put("B", 11);
 
-        // 小调（忧郁、深沉）
-        KEY_SCALES.put("A小调", new int[]{69, 71, 72, 74, 76, 77, 79});
-        KEY_SCALES.put("E小调", new int[]{64, 66, 67, 69, 71, 72, 74});
-        KEY_SCALES.put("D小调", new int[]{62, 64, 65, 67, 69, 70, 72});
-        KEY_SCALES.put("C小调", new int[]{60, 62, 63, 65, 67, 68, 70});
-        KEY_SCALES.put("B小调", new int[]{71, 73, 74, 76, 78, 79, 81});
-        KEY_SCALES.put("G小调", new int[]{67, 69, 70, 72, 74, 75, 77});
+        INSTRUMENT_PROGRAMS.put("钢琴", 0);
+        INSTRUMENT_PROGRAMS.put("原声钢琴", 0);
+        INSTRUMENT_PROGRAMS.put("尼龙吉他", 24);
+        INSTRUMENT_PROGRAMS.put("木吉他", 25);
+        INSTRUMENT_PROGRAMS.put("原声吉他", 25);
+        INSTRUMENT_PROGRAMS.put("电吉他", 29);
+        INSTRUMENT_PROGRAMS.put("贝斯", 33);
+        INSTRUMENT_PROGRAMS.put("弦乐", 48);
+        INSTRUMENT_PROGRAMS.put("小提琴", 40);
+        INSTRUMENT_PROGRAMS.put("萨克斯", 65);
+        INSTRUMENT_PROGRAMS.put("合成器", 81);
+
+        GENRE_PROGRAMS.put("流行", 0);
+        GENRE_PROGRAMS.put("民谣", 25);
+        GENRE_PROGRAMS.put("摇滚", 29);
+        GENRE_PROGRAMS.put("爵士", 0);
+        GENRE_PROGRAMS.put("R&B", 4);
+        GENRE_PROGRAMS.put("R＆B", 4);
+        GENRE_PROGRAMS.put("电子", 81);
+        GENRE_PROGRAMS.put("古典", 0);
+        GENRE_PROGRAMS.put("嘻哈", 4);
     }
 
-    // ============================================================
-    // 和弦音符表
-    // 每个和弦由3个音组成（根音、三音、五音）
-    // 比如C和弦 = C+E+G = 60+64+67
-    // ============================================================
-    private static final Map<String, int[]> CHORD_NOTES = new HashMap<>();
-
-    static {
-        // 大三和弦（明亮）
-        CHORD_NOTES.put("C",  new int[]{48, 52, 55});
-        CHORD_NOTES.put("G",  new int[]{43, 47, 50});
-        CHORD_NOTES.put("D",  new int[]{50, 54, 57});
-        CHORD_NOTES.put("F",  new int[]{53, 57, 60});
-        CHORD_NOTES.put("A",  new int[]{45, 49, 52});
-        CHORD_NOTES.put("E",  new int[]{52, 56, 59});
-        CHORD_NOTES.put("B",  new int[]{47, 51, 54});
-
-        // 小三和弦（忧郁）
-        CHORD_NOTES.put("Am", new int[]{45, 48, 52});
-        CHORD_NOTES.put("Em", new int[]{40, 43, 47});
-        CHORD_NOTES.put("Dm", new int[]{50, 53, 57});
-        CHORD_NOTES.put("Cm", new int[]{48, 51, 55});
-        CHORD_NOTES.put("Bm", new int[]{47, 50, 54});
-        CHORD_NOTES.put("Gm", new int[]{43, 46, 50});
-    }
-
-    // ============================================================
-    // 乐器音色表（MIDI Program Number 0-127）
-    // 根据genre选择合适的乐器
-    // ============================================================
-    private static final Map<String, Integer> GENRE_INSTRUMENTS = new HashMap<>();
-
-    static {
-        GENRE_INSTRUMENTS.put("流行",   0);   // 钢琴
-        GENRE_INSTRUMENTS.put("古典",   48);  // 弦乐合奏
-        GENRE_INSTRUMENTS.put("爵士",   66);  // 萨克斯
-        GENRE_INSTRUMENTS.put("摇滚",   29);  // 电吉他
-        GENRE_INSTRUMENTS.put("民谣",   25);  // 原声吉他
-        GENRE_INSTRUMENTS.put("电子",   81);  // 合成器
-        GENRE_INSTRUMENTS.put("R&B",    33);  // 电贝斯
-        GENRE_INSTRUMENTS.put("嘻哈",   0);   // 钢琴
-        GENRE_INSTRUMENTS.put("默认",   0);   // 钢琴
-    }
-
-    // ============================================================
-    // 主方法：根据AI返回的MusicParams生成MIDI文件
-    // ============================================================
     public String generateMidi(MusicParams params) throws Exception {
+        Sequence sequence = new Sequence(Sequence.PPQ, PPQ);
 
-        // 每拍48个tick，比之前的24更细腻
-        Sequence sequence = new Sequence(Sequence.PPQ, 48);
-
-        // 设置速度
-        int bpm = params.getBpm() > 0 ? params.getBpm() : 80;
-        long mpq = 60000000L / bpm;
-        setTempo(sequence, mpq);
-
-        // 获取调式音阶，找不到就默认C大调
+        int bpm = normalizeBpm(params.getBpm());
+        int mainProgram = getInstrumentProgram(params.getInstrument(), params.getGenre());
+        int baseVelocity = getVelocity(params.getMood());
         int[] scale = getScale(params.getKey());
+        List<String> progression = parseChords(params.getChords());
+        List<SongSection> sections = parseSongSections(params.getLyrics());
 
-        // 获取力度（根据mood决定轻重）
-        int velocity = getVelocity(params.getMood());
+        if (sections.isEmpty()) {
+            sections = defaultSections();
+        }
 
-        // 获取乐器（根据genre决定音色）
-        int instrument = getInstrument(params.getGenre());
+        setTempo(sequence, bpm);
 
-        // 解析和弦进行
-        List<String> chordList = parseChords(params.getChords());
-
-        // 生成旋律轨道（第0轨）
         Track melodyTrack = sequence.createTrack();
-        generateMelody(melodyTrack, scale, bpm, velocity, instrument, chordList,params);
-
-        // 生成和弦伴奏轨道（第1轨）
         Track chordTrack = sequence.createTrack();
-        generateChords(chordTrack, chordList, velocity);
+        Track bassTrack = sequence.createTrack();
+        Track drumTrack = sequence.createTrack();
 
-        // 保存文件
+        setProgram(melodyTrack, CH_MELODY, mainProgram);
+        setProgram(chordTrack, CH_CHORD, mainProgram);
+        setProgram(bassTrack, CH_BASS, 33);
+
+        Random random = new Random(buildSeed(params));
+
+        System.out.println("🎵 MIDI v2 生成参数");
+        System.out.println("Mood: " + params.getMood());
+        System.out.println("Genre: " + params.getGenre());
+        System.out.println("Instrument: " + params.getInstrument());
+        System.out.println("Program: " + mainProgram);
+        System.out.println("Key: " + params.getKey());
+        System.out.println("BPM: " + bpm);
+        System.out.println("Chords: " + progression);
+        System.out.println("Sections: " + sections);
+
+        int tick = 0;
+
+        int introBars = 2;
+        generateIntro(chordTrack, bassTrack, drumTrack, progression, params, baseVelocity, tick, introBars);
+        tick += introBars * BAR;
+
+        for (SongSection section : sections) {
+            int bars = normalizeSectionBars(section);
+            generateSection(
+                    melodyTrack,
+                    chordTrack,
+                    bassTrack,
+                    drumTrack,
+                    scale,
+                    progression,
+                    params,
+                    section,
+                    baseVelocity,
+                    tick,
+                    bars,
+                    random
+            );
+            tick += bars * BAR;
+        }
+
+        int outroBars = 2;
+        generateOutro(chordTrack, bassTrack, drumTrack, progression, params, baseVelocity, tick, outroBars);
+        tick += outroBars * BAR;
+
+        addEndOfTrack(melodyTrack, tick + PPQ);
+        addEndOfTrack(chordTrack, tick + PPQ);
+        addEndOfTrack(bassTrack, tick + PPQ);
+        addEndOfTrack(drumTrack, tick + PPQ);
+
+        File outputDir = new File("output");
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+
         String fileName = "music_" + System.currentTimeMillis() + ".mid";
-        String filePath = "output/" + fileName;
-        new File("output").mkdirs();
-        MidiSystem.write(sequence, 1, new File(filePath));
+        File outputFile = new File(outputDir, fileName);
+        MidiSystem.write(sequence, 1, outputFile);
 
-        return filePath;
+        System.out.println("✅ MIDI v2 生成完成: " + outputFile.getPath());
+        return outputFile.getPath();
     }
 
-    // ============================================================
-    // 设置速度
-    // ============================================================
-    private void setTempo(Sequence sequence, long mpq) throws Exception {
-        Track track = sequence.createTrack();
-        MetaMessage tempoMsg = new MetaMessage();
-        byte[] bt = {(byte)(mpq >> 16), (byte)(mpq >> 8), (byte)(mpq)};
-        tempoMsg.setMessage(0x51, bt, 3);
-        track.add(new MidiEvent(tempoMsg, 0));
-    }
+    private List<SongSection> parseSongSections(String lyrics) {
+        List<SongSection> sections = new ArrayList<>();
 
-    // ============================================================
-    // 获取调式音阶
-    // 先精确匹配，匹配不到就模糊匹配，最后默认C大调
-    // ============================================================
-    private int[] getScale(String key) {
-        if (key == null) return KEY_SCALES.get("C大调");
-
-        // 精确匹配
-        if (KEY_SCALES.containsKey(key)) {
-            return KEY_SCALES.get(key);
+        if (lyrics == null || lyrics.isBlank()) {
+            return sections;
         }
 
-        // 模糊匹配（AI可能返回"C大调（明亮）"这种带括号的）
-        for (Map.Entry<String, int[]> entry : KEY_SCALES.entrySet()) {
-            if (key.contains(entry.getKey()) || entry.getKey().contains(key)) {
-                return entry.getValue();
+        String currentName = "Verse 1";
+        int lyricLines = 0;
+
+        String[] lines = lyrics.split("\\R");
+
+        for (String raw : lines) {
+            String line = raw.trim();
+
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            if (isSectionTag(line)) {
+                if (lyricLines > 0) {
+                    sections.add(new SongSection(currentName, lyricLines));
+                }
+
+                currentName = line.substring(1, line.length() - 1).trim();
+                lyricLines = 0;
+                continue;
+            }
+
+            lyricLines++;
+        }
+
+        if (lyricLines > 0) {
+            sections.add(new SongSection(currentName, lyricLines));
+        }
+
+        return sections;
+    }
+
+    private boolean isSectionTag(String line) {
+        return line.matches("^\\[(Verse(?:\\s+\\d+)?|Pre-Chorus|Chorus|Bridge|Final Chorus|Intro|Outro)\\]$");
+    }
+
+    private List<SongSection> defaultSections() {
+        return new ArrayList<>(List.of(
+                new SongSection("Verse 1", 4),
+                new SongSection("Pre-Chorus", 2),
+                new SongSection("Chorus", 4),
+                new SongSection("Verse 2", 4),
+                new SongSection("Chorus", 4),
+                new SongSection("Bridge", 4),
+                new SongSection("Final Chorus", 4)
+        ));
+    }
+
+    private int normalizeSectionBars(SongSection section) {
+        int bars = section.lyricLines;
+
+        if (section.type() == SectionType.PRE_CHORUS) {
+            return clamp(bars, 2, 4);
+        }
+
+        if (section.type() == SectionType.BRIDGE) {
+            return clamp(bars, 2, 6);
+        }
+
+        if (section.type() == SectionType.CHORUS ||
+                section.type() == SectionType.FINAL_CHORUS) {
+            return clamp(bars, 4, 8);
+        }
+
+        return clamp(bars, 4, 8);
+    }
+
+    private void generateSection(
+            Track melodyTrack,
+            Track chordTrack,
+            Track bassTrack,
+            Track drumTrack,
+            int[] scale,
+            List<String> progression,
+            MusicParams params,
+            SongSection section,
+            int baseVelocity,
+            int startTick,
+            int bars,
+            Random random
+    ) throws Exception {
+
+        SectionType type = section.type();
+        int energy = energyFor(type);
+
+        System.out.println("  ▶ " + section.name + " | bars=" + bars + " | energy=" + energy);
+
+        for (int barIndex = 0; barIndex < bars; barIndex++) {
+            int barTick = startTick + barIndex * BAR;
+            String chord = progression.get(barIndex % progression.size());
+
+            generateMelodyBar(
+                    melodyTrack,
+                    scale,
+                    chord,
+                    params,
+                    type,
+                    baseVelocity,
+                    energy,
+                    barTick,
+                    random
+            );
+
+            generateAccompanimentBar(
+                    chordTrack,
+                    chord,
+                    params,
+                    type,
+                    baseVelocity,
+                    energy,
+                    barTick
+            );
+
+            generateBassBar(
+                    bassTrack,
+                    chord,
+                    type,
+                    baseVelocity,
+                    energy,
+                    barTick
+            );
+
+            generateDrumBar(
+                    drumTrack,
+                    params,
+                    type,
+                    baseVelocity,
+                    energy,
+                    barTick,
+                    barIndex
+            );
+        }
+    }
+
+    private int energyFor(SectionType type) {
+        return switch (type) {
+            case VERSE -> 2;
+            case PRE_CHORUS -> 3;
+            case CHORUS -> 4;
+            case FINAL_CHORUS -> 5;
+            case BRIDGE -> 3;
+            case INTRO -> 1;
+            case OUTRO -> 1;
+        };
+    }
+
+    private void generateMelodyBar(
+            Track track,
+            int[] scale,
+            String chord,
+            MusicParams params,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick,
+            Random random
+    ) throws Exception {
+
+        int[] chordNotes = chordToNotes(chord);
+        String genre = safe(params.getGenre());
+
+        int[] rhythm;
+
+        if (genre.contains("R&B") || genre.contains("R＆B")) {
+            rhythm = new int[]{PPQ, PPQ / 2, PPQ / 2, PPQ, PPQ};
+        } else if (type == SectionType.CHORUS || type == SectionType.FINAL_CHORUS) {
+            rhythm = new int[]{PPQ / 2, PPQ / 2, PPQ / 2, PPQ / 2, PPQ, PPQ};
+        } else if (type == SectionType.BRIDGE) {
+            rhythm = new int[]{PPQ * 2, PPQ, PPQ};
+        } else {
+            rhythm = new int[]{PPQ, PPQ, PPQ / 2, PPQ / 2, PPQ};
+        }
+
+        int cursor = barTick;
+
+        for (int i = 0; i < rhythm.length && cursor < barTick + BAR; i++) {
+            int duration = Math.min(rhythm[i], barTick + BAR - cursor);
+            boolean strongBeat = ((cursor - barTick) % PPQ == 0);
+
+            int note;
+
+            if (strongBeat && chordNotes.length > 0) {
+                int chordTone = chordNotes[Math.min(i % chordNotes.length, chordNotes.length - 1)];
+                note = raiseToMelodyRegister(chordTone);
+            } else {
+                note = scale[random.nextInt(scale.length)];
+            }
+
+            if (type == SectionType.CHORUS || type == SectionType.FINAL_CHORUS) {
+                if (note < 67) {
+                    note += 12;
+                }
+            }
+
+            if (type == SectionType.BRIDGE && i == rhythm.length - 1) {
+                note += random.nextBoolean() ? 2 : -2;
+            }
+
+            int velocity = clampVelocity(
+                    baseVelocity +
+                            energy * 4 +
+                            random.nextInt(9) - 4
+            );
+
+            int gate = Math.max(PPQ / 4, (int) (duration * 0.82));
+
+            addNote(
+                    track,
+                    CH_MELODY,
+                    clamp(note, 48, 88),
+                    velocity,
+                    cursor,
+                    gate
+            );
+
+            cursor += duration;
+        }
+    }
+
+    private int raiseToMelodyRegister(int note) {
+        int result = note;
+
+        while (result < 60) {
+            result += 12;
+        }
+
+        while (result > 76) {
+            result -= 12;
+        }
+
+        return result;
+    }
+
+    private void generateAccompanimentBar(
+            Track track,
+            String chord,
+            MusicParams params,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick
+    ) throws Exception {
+
+        int[] notes = chordToNotes(chord);
+        String instrument = safe(params.getInstrument());
+
+        if (instrument.contains("吉他")) {
+            generateGuitarBar(track, notes, type, baseVelocity, energy, barTick);
+        } else {
+            generatePianoBar(track, notes, type, baseVelocity, energy, barTick);
+        }
+    }
+
+    private void generatePianoBar(
+            Track track,
+            int[] notes,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick
+    ) throws Exception {
+
+        int velocity = clampVelocity((int) (baseVelocity * 0.72) + energy * 3);
+
+        if (type == SectionType.VERSE) {
+            int[] order = buildArpeggioOrder(notes);
+
+            for (int i = 0; i < 8; i++) {
+                int note = order[i % order.length];
+                addNote(track, CH_CHORD, note, velocity - 6, barTick + i * (PPQ / 2), PPQ / 2 - 4);
+            }
+            return;
+        }
+
+        if (type == SectionType.PRE_CHORUS) {
+            for (int beat = 0; beat < 4; beat++) {
+                int v = velocity + beat * 2;
+                addChord(track, CH_CHORD, notes, v, barTick + beat * PPQ, PPQ - 6);
+            }
+            return;
+        }
+
+        if (type == SectionType.CHORUS || type == SectionType.FINAL_CHORUS) {
+            for (int eighth = 0; eighth < 8; eighth++) {
+                int v = velocity + (eighth % 2 == 0 ? 5 : -3);
+                addChord(track, CH_CHORD, notes, v, barTick + eighth * (PPQ / 2), PPQ / 2 - 3);
+            }
+
+            if (notes.length > 0) {
+                addNote(track, CH_CHORD, notes[0] + 12, velocity + 6, barTick, BAR - 8);
+            }
+            return;
+        }
+
+        if (type == SectionType.BRIDGE) {
+            addChord(track, CH_CHORD, notes, velocity - 4, barTick, PPQ * 2 - 8);
+            addChord(track, CH_CHORD, invertChord(notes), velocity, barTick + PPQ * 2, PPQ * 2 - 8);
+            return;
+        }
+
+        addChord(track, CH_CHORD, notes, velocity, barTick, BAR - 8);
+    }
+
+    private void generateGuitarBar(
+            Track track,
+            int[] notes,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick
+    ) throws Exception {
+
+        int velocity = clampVelocity((int) (baseVelocity * 0.75) + energy * 3);
+
+        if (type == SectionType.VERSE || type == SectionType.BRIDGE) {
+            int[] order = buildArpeggioOrder(notes);
+
+            for (int i = 0; i < 8; i++) {
+                int note = order[i % order.length];
+
+                addNote(
+                        track,
+                        CH_CHORD,
+                        note,
+                        velocity - 5,
+                        barTick + i * (PPQ / 2),
+                        PPQ / 2 - 5
+                );
+            }
+            return;
+        }
+
+        int[] offsets = {
+                0,
+                PPQ,
+                PPQ + PPQ / 2,
+                PPQ * 2 + PPQ / 2,
+                PPQ * 3,
+                PPQ * 3 + PPQ / 2
+        };
+
+        boolean[] upStroke = {
+                false, false, true, true, false, true
+        };
+
+        for (int i = 0; i < offsets.length; i++) {
+            int v = velocity + (i == 0 || i == 4 ? 6 : -2);
+
+            strumChord(
+                    track,
+                    notes,
+                    v,
+                    barTick + offsets[i],
+                    upStroke[i],
+                    PPQ / 2
+            );
+        }
+    }
+
+    private int[] buildArpeggioOrder(int[] notes) {
+        if (notes.length == 0) {
+            return new int[]{48, 55, 52, 55};
+        }
+
+        if (notes.length == 1) {
+            return new int[]{notes[0]};
+        }
+
+        if (notes.length == 2) {
+            return new int[]{notes[0], notes[1], notes[0] + 12, notes[1]};
+        }
+
+        return new int[]{
+                notes[0],
+                notes[Math.min(2, notes.length - 1)],
+                notes[1],
+                notes[Math.min(2, notes.length - 1)]
+        };
+    }
+
+    private int[] invertChord(int[] notes) {
+        if (notes.length < 2) {
+            return notes;
+        }
+
+        int[] result = Arrays.copyOf(notes, notes.length);
+        result[0] += 12;
+        Arrays.sort(result);
+        return result;
+    }
+
+    private void strumChord(
+            Track track,
+            int[] notes,
+            int velocity,
+            int startTick,
+            boolean upStroke,
+            int duration
+    ) throws Exception {
+
+        if (upStroke) {
+            for (int i = notes.length - 1; i >= 0; i--) {
+                int delay = (notes.length - 1 - i) * 3;
+                addNote(track, CH_CHORD, notes[i], velocity, startTick + delay, duration);
+            }
+        } else {
+            for (int i = 0; i < notes.length; i++) {
+                addNote(track, CH_CHORD, notes[i], velocity, startTick + i * 3, duration);
             }
         }
-
-        // 判断是否含"小调"关键词，默认用A小调
-        if (key.contains("小调")) return KEY_SCALES.get("A小调");
-
-        return KEY_SCALES.get("C大调");
     }
 
-    // ============================================================
-    // 根据mood获取力度
-    // 忧郁=轻柔，欢快=响亮，平静=中等
-    // ============================================================
-    private int getVelocity(String mood) {
-        if (mood == null) return 70;
-        if (mood.contains("忧郁") || mood.contains("悲伤") || mood.contains("低沉")) return 50;
-        if (mood.contains("欢快") || mood.contains("激动") || mood.contains("兴奋")) return 95;
-        if (mood.contains("平静") || mood.contains("舒缓") || mood.contains("温柔")) return 60;
-        if (mood.contains("紧张") || mood.contains("激烈")) return 100;
-        return 70;
+    private void generateBassBar(
+            Track track,
+            String chord,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick
+    ) throws Exception {
+
+        int[] chordNotes = chordToNotes(chord);
+
+        if (chordNotes.length == 0) {
+            return;
+        }
+
+        int root = lowerToBassRegister(chordNotes[0]);
+        int fifth = lowerToBassRegister(chordNotes[Math.min(2, chordNotes.length - 1)]);
+        int velocity = clampVelocity((int) (baseVelocity * 0.78) + energy * 2);
+
+        if (type == SectionType.VERSE) {
+            addNote(track, CH_BASS, root, velocity, barTick, PPQ * 2 - 8);
+            addNote(track, CH_BASS, fifth, velocity - 5, barTick + PPQ * 2, PPQ * 2 - 8);
+            return;
+        }
+
+        if (type == SectionType.CHORUS || type == SectionType.FINAL_CHORUS) {
+            int[] notes = {root, root, fifth, root + 12};
+
+            for (int beat = 0; beat < 4; beat++) {
+                addNote(
+                        track,
+                        CH_BASS,
+                        clamp(notes[beat], 28, 52),
+                        velocity + (beat == 0 ? 5 : 0),
+                        barTick + beat * PPQ,
+                        PPQ - 6
+                );
+            }
+            return;
+        }
+
+        if (type == SectionType.PRE_CHORUS) {
+            addNote(track, CH_BASS, root, velocity, barTick, PPQ - 5);
+            addNote(track, CH_BASS, fifth, velocity, barTick + PPQ, PPQ - 5);
+            addNote(track, CH_BASS, root + 12, velocity + 3, barTick + PPQ * 2, PPQ - 5);
+            addNote(track, CH_BASS, fifth, velocity + 3, barTick + PPQ * 3, PPQ - 5);
+            return;
+        }
+
+        addNote(track, CH_BASS, root, velocity, barTick, BAR - 8);
     }
 
-    // ============================================================
-    // 根据genre获取乐器编号
-    // ============================================================
-    private int getInstrument(String genre) {
-        if (genre == null) return 0;
-        for (Map.Entry<String, Integer> entry : GENRE_INSTRUMENTS.entrySet()) {
-            if (genre.contains(entry.getKey())) {
-                return entry.getValue();
+    private int lowerToBassRegister(int note) {
+        int result = note;
+
+        while (result > 47) {
+            result -= 12;
+        }
+
+        while (result < 28) {
+            result += 12;
+        }
+
+        return result;
+    }
+
+    private void generateDrumBar(
+            Track track,
+            MusicParams params,
+            SectionType type,
+            int baseVelocity,
+            int energy,
+            int barTick,
+            int barIndex
+    ) throws Exception {
+
+        String genre = safe(params.getGenre());
+        int velocity = clampVelocity(baseVelocity + 10 + energy * 2);
+
+        boolean rnb = genre.contains("R&B") || genre.contains("R＆B");
+        boolean rock = genre.contains("摇滚");
+        boolean folk = genre.contains("民谣");
+        boolean electronic = genre.contains("电子");
+
+        if (type == SectionType.BRIDGE && barIndex % 2 == 0) {
+            addDrum(track, 36, velocity - 8, barTick, PPQ / 2);
+            addDrum(track, 38, velocity - 10, barTick + PPQ * 2, PPQ / 2);
+            return;
+        }
+
+        int hatStep =
+                (type == SectionType.CHORUS ||
+                        type == SectionType.FINAL_CHORUS ||
+                        rock ||
+                        electronic)
+                        ? PPQ / 2
+                        : PPQ;
+
+        for (int t = 0; t < BAR; t += hatStep) {
+            int hat = (t == BAR - PPQ / 2 && energy >= 4) ? 46 : 42;
+            addDrum(track, hat, velocity - 18, barTick + t, PPQ / 4);
+        }
+
+        addDrum(track, 38, velocity, barTick + PPQ, PPQ / 3);
+        addDrum(track, 38, velocity + 2, barTick + PPQ * 3, PPQ / 3);
+
+        addDrum(track, 36, velocity + 5, barTick, PPQ / 3);
+
+        if (rnb) {
+            addDrum(track, 36, velocity - 2, barTick + PPQ * 2 + PPQ / 2, PPQ / 3);
+        } else if (folk) {
+            addDrum(track, 36, velocity - 5, barTick + PPQ * 2, PPQ / 3);
+        } else {
+            addDrum(track, 36, velocity, barTick + PPQ * 2, PPQ / 3);
+        }
+
+        if (energy >= 4) {
+            addDrum(track, 36, velocity - 2, barTick + PPQ * 3 + PPQ / 2, PPQ / 3);
+        }
+
+        if (type == SectionType.FINAL_CHORUS && barIndex % 4 == 0) {
+            addDrum(track, 49, velocity + 8, barTick, PPQ / 2);
+        }
+    }
+
+    private void addDrum(
+            Track track,
+            int note,
+            int velocity,
+            int startTick,
+            int duration
+    ) throws Exception {
+        addNote(track, CH_DRUM, note, velocity, startTick, duration);
+    }
+
+    private void generateIntro(
+            Track chordTrack,
+            Track bassTrack,
+            Track drumTrack,
+            List<String> progression,
+            MusicParams params,
+            int baseVelocity,
+            int startTick,
+            int bars
+    ) throws Exception {
+
+        for (int bar = 0; bar < bars; bar++) {
+            int barTick = startTick + bar * BAR;
+            String chord = progression.get(bar % progression.size());
+            int[] notes = chordToNotes(chord);
+
+            if (safe(params.getInstrument()).contains("吉他")) {
+                generateGuitarBar(chordTrack, notes, SectionType.VERSE, baseVelocity - 8, 1, barTick);
+            } else {
+                generatePianoBar(chordTrack, notes, SectionType.VERSE, baseVelocity - 8, 1, barTick);
+            }
+
+            if (bar > 0) {
+                generateBassBar(bassTrack, chord, SectionType.VERSE, baseVelocity - 10, 1, barTick);
+            }
+
+            for (int beat = 0; beat < 4; beat++) {
+                addDrum(drumTrack, 42, baseVelocity - 22, barTick + beat * PPQ, PPQ / 4);
             }
         }
-        return 0; // 默认钢琴
     }
 
-    // ============================================================
-    // 解析和弦字符串
-    // 输入："Am-F-C-G" 或 "Am - F - C - G"
-    // 输出：["Am", "F", "C", "G"]
-    // ============================================================
+    private void generateOutro(
+            Track chordTrack,
+            Track bassTrack,
+            Track drumTrack,
+            List<String> progression,
+            MusicParams params,
+            int baseVelocity,
+            int startTick,
+            int bars
+    ) throws Exception {
+
+        for (int bar = 0; bar < bars; bar++) {
+            int barTick = startTick + bar * BAR;
+            String chord = progression.get(bar % progression.size());
+            int[] notes = chordToNotes(chord);
+            int v = Math.max(36, baseVelocity - 10 - bar * 6);
+
+            if (bar == bars - 1) {
+                addChord(chordTrack, CH_CHORD, notes, v, barTick, BAR - 4);
+
+                if (notes.length > 0) {
+                    addNote(
+                            bassTrack,
+                            CH_BASS,
+                            lowerToBassRegister(notes[0]),
+                            v,
+                            barTick,
+                            BAR - 4
+                    );
+                }
+
+                addDrum(drumTrack, 49, v + 10, barTick, PPQ / 2);
+            } else {
+                if (safe(params.getInstrument()).contains("吉他")) {
+                    generateGuitarBar(chordTrack, notes, SectionType.VERSE, v, 1, barTick);
+                } else {
+                    generatePianoBar(chordTrack, notes, SectionType.VERSE, v, 1, barTick);
+                }
+            }
+        }
+    }
+
     private List<String> parseChords(String chords) {
         List<String> result = new ArrayList<>();
-        if (chords == null || chords.isEmpty()) {
-            result.add("C"); result.add("G");
-            result.add("Am"); result.add("F");
-            return result;
+
+        if (chords == null || chords.isBlank()) {
+            return new ArrayList<>(List.of("C", "G", "Am", "F"));
         }
 
-        // 用-或空格分割，清理空白
-        String[] parts = chords.split("[-–—]");
+        String normalized = chords
+                .replace("→", "-")
+                .replace("—", "-")
+                .replace("–", "-")
+                .replace(",", "-")
+                .replace("，", "-")
+                .replace("|", "-");
+
+        String[] parts = normalized.split("-");
+
         for (String part : parts) {
             String chord = part.trim()
-                    .replaceAll("\\(.*?\\)", "") // 去掉括号内容
-                    .replaceAll("[^A-Za-z#b]", "") // 只保留和弦名称
-                    .trim();
-            if (!chord.isEmpty()) {
-                result.add(chord);
+                    .replaceAll("\\(.*?\\)", "")
+                    .replaceAll("\\s+", "");
+
+            if (chord.matches("[A-Ga-g](?:#|b)?[A-Za-z0-9+#/]*")) {
+                result.add(normalizeChordName(chord));
             }
         }
 
         if (result.isEmpty()) {
-            result.add("C"); result.add("G");
-            result.add("Am"); result.add("F");
+            result.addAll(List.of("C", "G", "Am", "F"));
         }
+
         return result;
     }
 
-    // ============================================================
-    // 生成旋律轨道
-    // 根据音阶生成旋律，每个和弦段落用对应音阶的音符
-    // ============================================================
-    private void generateMelody(Track track, int[] scale, int bpm,
-                                int velocity, int instrument, List<String> chords,MusicParams params) throws Exception {
+    private int[] chordToNotes(String chord) {
+        if (chord == null || chord.isBlank()) {
+            return chordToNotes("C");
+        }
 
-        // 设置乐器音色
-        ShortMessage programChange = new ShortMessage();
-        programChange.setMessage(ShortMessage.PROGRAM_CHANGE, 0, instrument, 0);
-        track.add(new MidiEvent(programChange, 0));
+        String clean = chord.trim()
+                .replace("♯", "#")
+                .replace("♭", "b")
+                .replaceAll("\\s+", "");
 
-        int ticksPerBeat = 48;
-        int tick = 0;
+        if (clean.contains("/")) {
+            clean = clean.substring(0, clean.indexOf('/'));
+        }
 
-// 定义几种不同的旋律节奏型，随机选
-        int[][] patterns = {
-                {0, 2, 4, 6, 4, 2, 0, 2},   // 上行再下行
-                {4, 2, 0, 2, 4, 5, 4, 2},   // 从高到低
-                {0, 0, 2, 4, 2, 4, 6, 4},   // 跳跃型
-                {6, 4, 2, 0, 2, 4, 2, 0},   // 下行
-                {0, 2, 4, 2, 0, 4, 2, 6},   // 混合
+        Matcher matcher = Pattern.compile("^([A-Ga-g](?:#|b)?)(.*)$").matcher(clean);
+
+        if (!matcher.find()) {
+            return chordToNotes("C");
+        }
+
+        String root = normalizeNoteName(matcher.group(1));
+        String suffix = matcher.group(2);
+        String lower = suffix.toLowerCase();
+
+        Integer semitone = NOTE_TO_SEMITONE.get(root);
+
+        if (semitone == null) {
+            return chordToNotes("C");
+        }
+
+        int rootMidi = 48 + semitone;
+        List<Integer> intervals = new ArrayList<>();
+
+        boolean minor = suffix.startsWith("m") && !suffix.startsWith("maj");
+
+        if (lower.startsWith("dim")) {
+            intervals.addAll(List.of(0, 3, 6));
+        } else if (lower.startsWith("aug") || lower.startsWith("+")) {
+            intervals.addAll(List.of(0, 4, 8));
+        } else if (lower.startsWith("sus2")) {
+            intervals.addAll(List.of(0, 2, 7));
+        } else if (lower.startsWith("sus4")) {
+            intervals.addAll(List.of(0, 5, 7));
+        } else if (minor) {
+            intervals.addAll(List.of(0, 3, 7));
+        } else {
+            intervals.addAll(List.of(0, 4, 7));
+        }
+
+        if (lower.contains("maj7")) {
+            intervals.add(11);
+        } else if (lower.contains("7")) {
+            intervals.add(10);
+        }
+
+        if (lower.contains("add9")) {
+            intervals.add(14);
+        } else if (lower.endsWith("9") || lower.contains("9")) {
+            if (!lower.contains("7") && !lower.contains("maj7")) {
+                intervals.add(10);
+            }
+            intervals.add(14);
+        }
+
+        if (lower.contains("11")) {
+            intervals.add(17);
+        }
+
+        if (lower.contains("13")) {
+            intervals.add(21);
+        }
+
+        return intervals.stream()
+                .distinct()
+                .mapToInt(i -> rootMidi + i)
+                .toArray();
+    }
+
+    private int[] getScale(String key) {
+        if (key == null || key.isBlank()) {
+            return buildScale("C", true);
+        }
+
+        String normalized = key.trim()
+                .replace("大调", " Major")
+                .replace("小调", " Minor");
+
+        Matcher matcher = Pattern
+                .compile("^([A-Ga-g](?:#|b)?).*?(Major|Minor|major|minor)")
+                .matcher(normalized);
+
+        if (matcher.find()) {
+            String root = normalizeNoteName(matcher.group(1));
+            boolean major = matcher.group(2).equalsIgnoreCase("Major");
+            return buildScale(root, major);
+        }
+
+        if (normalized.toLowerCase().contains("minor")) {
+            return buildScale("A", false);
+        }
+
+        return buildScale("C", true);
+    }
+
+    private int[] buildScale(String root, boolean major) {
+        int rootSemitone = NOTE_TO_SEMITONE.getOrDefault(root, 0);
+        int base = 60 + rootSemitone;
+
+        int[] intervals = major
+                ? new int[]{0, 2, 4, 5, 7, 9, 11}
+                : new int[]{0, 2, 3, 5, 7, 8, 10};
+
+        int[] scale = new int[intervals.length];
+
+        for (int i = 0; i < intervals.length; i++) {
+            scale[i] = base + intervals[i];
+        }
+
+        return scale;
+    }
+
+    private int normalizeBpm(int bpm) {
+        if (bpm <= 0) {
+            return 80;
+        }
+
+        return clamp(bpm, 50, 180);
+    }
+
+    private int getVelocity(String mood) {
+        if (mood == null) {
+            return 72;
+        }
+
+        if (mood.contains("忧郁") ||
+                mood.contains("悲伤") ||
+                mood.contains("低沉") ||
+                mood.contains("失恋")) {
+            return 58;
+        }
+
+        if (mood.contains("温柔") ||
+                mood.contains("舒缓") ||
+                mood.contains("平静") ||
+                mood.contains("治愈")) {
+            return 64;
+        }
+
+        if (mood.contains("欢快") ||
+                mood.contains("开心") ||
+                mood.contains("兴奋")) {
+            return 92;
+        }
+
+        if (mood.contains("激烈") ||
+                mood.contains("热血") ||
+                mood.contains("紧张")) {
+            return 104;
+        }
+
+        return 74;
+    }
+
+    private int getInstrumentProgram(String instrument, String genre) {
+        if (instrument != null) {
+            String text = instrument.trim();
+
+            for (Map.Entry<String, Integer> entry : INSTRUMENT_PROGRAMS.entrySet()) {
+                if (text.contains(entry.getKey())) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        if (genre != null) {
+            for (Map.Entry<String, Integer> entry : GENRE_PROGRAMS.entrySet()) {
+                if (genre.contains(entry.getKey())) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private void setTempo(Sequence sequence, int bpm) throws Exception {
+        Track tempoTrack = sequence.createTrack();
+        long mpq = 60_000_000L / bpm;
+
+        MetaMessage tempoMessage = new MetaMessage();
+
+        byte[] data = {
+                (byte) (mpq >> 16),
+                (byte) (mpq >> 8),
+                (byte) mpq
         };
 
-// 根据mood选择旋律风格
-        int patternIndex;
-        if (params.getMood() != null && params.getMood().contains("忧郁")) {
-            patternIndex = 3; // 忧郁用下行旋律
-        } else if (params.getMood() != null && params.getMood().contains("欢快")) {
-            patternIndex = 2; // 欢快用跳跃型
-        } else {
-            patternIndex = (int)(Math.random() * patterns.length); // 其他随机
-        }
+        tempoMessage.setMessage(0x51, data, 3);
+        tempoTrack.add(new MidiEvent(tempoMessage, 0));
+    }
 
-        int[] selectedPattern = patterns[patternIndex];
+    private void setProgram(Track track, int channel, int instrument) throws Exception {
+        ShortMessage message = new ShortMessage();
 
-        for (int loop = 0; loop < 2; loop++) {
-            for (int ci = 0; ci < chords.size(); ci++) {
-                for (int i = 0; i < selectedPattern.length / 2; i++) {
-                    int scaleIndex = selectedPattern[i] % scale.length;
-                    int note = scale[scaleIndex];
+        message.setMessage(
+                ShortMessage.PROGRAM_CHANGE,
+                channel,
+                clamp(instrument, 0, 127),
+                0
+        );
 
-                    // 第二遍升高八度
-                    if (loop == 1) note += 12;
+        track.add(new MidiEvent(message, 0));
+    }
 
-                    // 力度随机波动
-                    int v = velocity + (int)(Math.random() * 15 - 7);
-                    v = Math.max(30, Math.min(120, v));
+    private void addChord(
+            Track track,
+            int channel,
+            int[] notes,
+            int velocity,
+            int startTick,
+            int duration
+    ) throws Exception {
 
-                    // 节奏变化：偶尔用半拍
-                    int duration = (i % 3 == 2) ? ticksPerBeat / 2 : ticksPerBeat;
-
-                    addNote(track, 0, note, v, tick, duration);
-                    tick += duration;
-                }
-            }
+        for (int note : notes) {
+            addNote(track, channel, note, velocity, startTick, duration);
         }
     }
 
-    // ============================================================
-    // 生成和弦伴奏轨道
-    // 每个和弦持续4拍，低音区演奏
-    // ============================================================
-    private void generateChords(Track track, List<String> chords, int velocity) throws Exception {
+    private void addNote(
+            Track track,
+            int channel,
+            int note,
+            int velocity,
+            int startTick,
+            int durationTick
+    ) throws Exception {
 
-        // 伴奏用钢琴，通道1
-        ShortMessage programChange = new ShortMessage();
-        programChange.setMessage(ShortMessage.PROGRAM_CHANGE, 1, 0, 0);
-        track.add(new MidiEvent(programChange, 0));
+        int safeNote = clamp(note, 0, 127);
+        int safeVelocity = clampVelocity(velocity);
+        int safeDuration = Math.max(1, durationTick);
 
-        int ticksPerBeat = 48;
-        int beatsPerChord = 4; // 每个和弦持续4拍
-        int tick = 0;
-        int chordVelocity = (int)(velocity * 0.7); // 伴奏比旋律轻一点
-
-        for (int loop = 0; loop < 2; loop++) {
-            for (String chord : chords) {
-                int[] notes = CHORD_NOTES.getOrDefault(chord, CHORD_NOTES.get("C"));
-                int duration = ticksPerBeat * beatsPerChord;
-
-                // 三个音同时响（和弦）
-                for (int note : notes) {
-                    addNote(track, 1, note, chordVelocity, tick, duration);
-                }
-                tick += duration;
-            }
-        }
-    }
-
-    // ============================================================
-    // 工具方法：添加一个音符事件
-    // channel: MIDI通道（0=旋律，1=伴奏，9=鼓）
-    // note: 音符编号
-    // velocity: 力度
-    // startTick: 开始时间
-    // durationTick: 持续时间
-    // ============================================================
-    private void addNote(Track track, int channel, int note,
-                         int velocity, int startTick, int durationTick) throws Exception {
         ShortMessage on = new ShortMessage();
-        on.setMessage(ShortMessage.NOTE_ON, channel, note, velocity);
+
+        on.setMessage(
+                ShortMessage.NOTE_ON,
+                channel,
+                safeNote,
+                safeVelocity
+        );
+
         track.add(new MidiEvent(on, startTick));
 
         ShortMessage off = new ShortMessage();
-        off.setMessage(ShortMessage.NOTE_OFF, channel, note, 0);
-        track.add(new MidiEvent(off, startTick + durationTick));
+
+        off.setMessage(
+                ShortMessage.NOTE_OFF,
+                channel,
+                safeNote,
+                0
+        );
+
+        track.add(new MidiEvent(off, startTick + safeDuration));
+    }
+
+    private void addEndOfTrack(Track track, int tick) throws Exception {
+        MetaMessage end = new MetaMessage();
+        end.setMessage(0x2F, new byte[0], 0);
+        track.add(new MidiEvent(end, tick));
+    }
+
+    private int clampVelocity(int velocity) {
+        return clamp(velocity, 1, 127);
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private String normalizeNoteName(String note) {
+        if (note == null || note.isBlank()) {
+            return "C";
+        }
+
+        String first = note.substring(0, 1).toUpperCase();
+
+        if (note.length() == 1) {
+            return first;
+        }
+
+        return first + note.substring(1);
+    }
+
+    private String normalizeChordName(String chord) {
+        if (chord == null || chord.isBlank()) {
+            return "C";
+        }
+
+        String first = chord.substring(0, 1).toUpperCase();
+        return first + chord.substring(1);
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private long buildSeed(MusicParams params) {
+        return Objects.hash(
+                safe(params.getMood()),
+                safe(params.getGenre()),
+                safe(params.getKey()),
+                safe(params.getChords()),
+                safe(params.getLyrics()),
+                safe(params.getInstrument()),
+                params.getBpm()
+        );
+    }
+
+    private enum SectionType {
+        INTRO,
+        VERSE,
+        PRE_CHORUS,
+        CHORUS,
+        BRIDGE,
+        FINAL_CHORUS,
+        OUTRO
+    }
+
+    private static class SongSection {
+        private final String name;
+        private final int lyricLines;
+
+        private SongSection(String name, int lyricLines) {
+            this.name = name == null ? "Verse" : name.trim();
+            this.lyricLines = Math.max(1, lyricLines);
+        }
+
+        private SectionType type() {
+            String lower = name.toLowerCase();
+
+            if (lower.contains("final chorus")) {
+                return SectionType.FINAL_CHORUS;
+            }
+
+            if (lower.contains("pre-chorus")) {
+                return SectionType.PRE_CHORUS;
+            }
+
+            if (lower.contains("chorus")) {
+                return SectionType.CHORUS;
+            }
+
+            if (lower.contains("bridge")) {
+                return SectionType.BRIDGE;
+            }
+
+            if (lower.contains("intro")) {
+                return SectionType.INTRO;
+            }
+
+            if (lower.contains("outro")) {
+                return SectionType.OUTRO;
+            }
+
+            return SectionType.VERSE;
+        }
+
+        @Override
+        public String toString() {
+            return name + "(" + lyricLines + ")";
+        }
     }
 }

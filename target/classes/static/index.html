@@ -1,188 +1,1067 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>声织 · SoundWeaver</title>
+<script>
+(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t='light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, 'Inter', sans-serif; background:#1a1208; color:#f0ede8; height:100vh; overflow:hidden; }
-canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
-::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:#c8a97e33; border-radius:4px; }
+/* OD-LAYOUT-PRIMITIVES v1 — structure only: display, flex/grid, overflow, wrapping, ratio.
+   Put this @layer first; product CSS outside the layer always wins. */
+@layer od-layout {
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
 
-nav { position:fixed; top:0; left:0; right:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 32px; background:#1a1208ee; backdrop-filter:blur(12px); border-bottom:1px solid #ffffff0a; }
-.nav-logo { font-size:14px; letter-spacing:0.15em; color:#c8a97e; font-weight:500; }
-.nav-links { display:flex; gap:24px; }
-.nav-link { font-size:13px; color:#ffffff44; cursor:pointer; transition:color 0.2s; }
-.nav-link:hover { color:#c8a97e; }
+  /* containers */
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
 
-/* 首页 */
-#homePage { position:relative; z-index:1; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 20px; padding-top:60px; }
-.hero-tag { font-size:11px; letter-spacing:0.2em; color:#c8a97e88; text-transform:uppercase; margin-bottom:20px; border:1px solid #c8a97e22; padding:5px 14px; border-radius:20px; }
-.hero-title { font-size:clamp(32px,5vw,56px); font-weight:300; text-align:center; line-height:1.15; margin-bottom:12px; color:#f0ede8; }
-.hero-title em { font-style:italic; color:#c8a97e; }
-.hero-sub { font-size:14px; color:#ffffff55; text-align:center; max-width:420px; line-height:1.8; margin-bottom:36px; }
-.input-card { width:100%; max-width:560px; background:#251a0c; border:1px solid #3a2a18; border-radius:18px; padding:20px; }
-.input-card textarea { width:100%; background:none; border:none; outline:none; color:#f0ede8; font-size:14px; line-height:1.7; resize:none; height:72px; font-family:inherit; }
-.input-card textarea::placeholder { color:#ffffff22; }
-.divider { height:1px; background:#3a2a18; margin:12px 0; }
-.input-actions { display:flex; justify-content:space-between; align-items:center; }
-.inst-group { display:flex; gap:6px; }
-.inst-btn { background:none; border:1px solid #3a2a18; border-radius:8px; padding:6px 12px; color:#ffffff44; font-size:12px; cursor:pointer; transition:all 0.2s; font-family:inherit; }
-.inst-btn.active, .inst-btn:hover { border-color:#c8a97e55; color:#c8a97e; background:#c8a97e0a; }
-.gen-btn { background:#c8a97e; border:none; border-radius:10px; padding:9px 24px; color:#1a1208; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; }
-.gen-btn:hover { background:#d4b88e; }
+  /* stacked information: each piece is its own line — never sibling inline spans */
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
 
-/* 结果页 */
-#resultPage { display:none; position:relative; z-index:1; height:100vh; padding-top:52px; }
-.result-header { padding:16px 28px 12px; flex-shrink:0; }
-.back-btn { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#c8a97e66; cursor:pointer; margin-bottom:12px; transition:color 0.2s; }
-.back-btn:hover { color:#c8a97e; }
-.result-title { font-size:24px; font-weight:300; color:#f0ede8; margin-bottom:8px; }
-.meta-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-.meta-chip { background:#251a0c; border:1px solid #3a2a18; border-radius:6px; padding:3px 10px; font-size:11px; color:#ffffff44; }
-.meta-chip span { color:#c8a97e; font-weight:500; }
+  /* media keeps its intrinsic ratio by default; never a distorted or cropped
+     cover by accident. height:auto lets the ratio win over an <img height="…">
+     attribute. Cropping to a uniform box is an explicit opt-in: set --od-ratio
+     AND add .od-media-cover together (per the core rule, only where a crop is
+     deliberate — tile thumbs, decorative fills — never on full-frame content). */
+  .od-media { display: block; width: 100%; height: auto; aspect-ratio: var(--od-ratio, auto); }
+  .od-media-cover { object-fit: cover; }
 
-/* 三格布局 */
-/* 外层用flex布局，左边内容+右边对话框 */
-.result-body { display:flex; gap:12px; padding:0 28px 20px; height:calc(100vh - 52px - 105px); align-items:stretch; }
+  /* data text only — authored copy is rewritten to its budget instead */
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2, .od-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .od-clamp-2 { -webkit-line-clamp: 2; }
+  .od-clamp-3 { -webkit-line-clamp: 3; }
+  .od-lines-2 { min-height: calc(2 * 1.4em); }   /* block-level reservation for a shared baseline */
+  .od-nowrap  { white-space: nowrap; }           /* 数字+单位 · 价格+起 · 日期+星期 */
+  .od-keep    { word-break: keep-all; overflow-wrap: anywhere; } /* CJK labels break at spaces / <wbr> first */
 
-/* 左边两列+播放器用grid */
-.left-content { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 72px; gap:12px; min-width:0; }
+  /* screen skeleton (optional): bars take their own space, the middle scrolls — no padding guessed for chrome */
+  .od-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
 
-.panel { background:#251a0c; border:1px solid #3a2a18; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
-.panel-header { padding:16px 20px 12px; border-bottom:1px solid #3a2a18; flex-shrink:0; }
-.panel-label { font-size:10px; letter-spacing:0.18em; color:#c8a97e66; text-transform:uppercase; }
-.panel-body { flex:1; overflow-y:auto; padding:16px 20px; }
+  /* horizontal rail: the next item peeks at the edge; trailing room survives overflow */
+  .od-rail { display: flex; gap: var(--od-gap, 8px); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+             padding-inline: var(--od-rail-pad, 16px); scroll-padding-inline: var(--od-rail-pad, 16px); }
+  .od-rail::-webkit-scrollbar { display: none; }
+  :where(.od-rail) > :where(*) { flex: none; scroll-snap-align: start; }
+  :where(.od-rail) > :where(:last-child) { margin-inline-end: var(--od-rail-pad, 16px); }
 
-/* 播放器横跨两列 */
-.player-row { grid-column:1/3; background:#251a0c; border:1px solid #3a2a18; border-radius:16px; padding:12px 20px; display:flex; align-items:center; }
+  .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
+  .od-touch  { min-width: 44px; min-height: 44px; }
+}
+/* /OD-LAYOUT-PRIMITIVES v1 */
 
-/* 对话框右侧全高 */
-.chat-panel { width:380px; flex-shrink:0; background:#1e1510; border:1px solid #3a2a18; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; align-self:stretch; }
+/* ===================== 设计令牌 · 深色 ===================== */
+:root{
+  color-scheme:dark;
+  --bg:#14110D;
+  --bg-2:#1A1610;
+  --surface:#1E1913;
+  --surface-2:#272119;
+  --surface-3:#332B20;
+  --elevated:#221C15;
+  --border:rgba(240,214,150,.10);
+  --border-2:rgba(240,214,150,.18);
+  --text:#F4EDDD;
+  --text-2:#B9AF98;
+  --text-3:#877D67;
+  --accent:#D9A94A;
+  --accent-2:#EFCB7E;
+  --accent-ink:#1C1405;
+  --accent-soft:rgba(217,169,74,.14);
+  --accent-line:rgba(217,169,74,.32);
+  --glow-2:rgba(46,107,99,.16);
+  --danger:#DE6B4A;
+  --warn:#E7C56B;
+  --topbar-bg:rgba(20,17,13,.78);
+  --cover-a:#D9A94A;
+  --cover-b:#241B0E;
+  --cover-c:#241B0E;
+  --piano-white:#1E1913;
+  --piano-black:#14110D;
+  --piano-stroke:rgba(240,214,150,.14);
+  --piano-label:rgba(240,214,150,.34);
+  --piano-label-active:#1C1405;
+  --scroll:rgba(240,214,150,.14);
+  --scroll-hover:rgba(240,214,150,.26);
+  --shadow-1:0 1px 0 rgba(255,255,255,.03), 0 14px 36px rgba(0,0,0,.48);
+  --shadow-2:0 30px 70px rgba(0,0,0,.6);
+  --modal-mask:rgba(8,6,4,.7);
 
-/* 和弦面板 */
-.chord-list { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-.chord-tag { background:#1a1208; border:1px solid #c8a97e33; border-radius:8px; padding:6px 14px; color:#c8a97e; font-size:13px; cursor:pointer; transition:all 0.2s; }
-.chord-tag:hover, .chord-tag.active { background:#c8a97e15; border-color:#c8a97e88; }
-.chord-diag { display:none; }
-.chord-diag.show { display:block; }
-.chord-name-big { font-size:16px; color:#c8a97e; margin-bottom:10px; font-weight:400; }
-.diag-inner { display:flex; gap:16px; align-items:flex-start; }
-.diag-desc { font-size:11px; color:#ffffff44; line-height:1.9; }
-.fretboard-grid { display:grid; grid-template-columns:repeat(4,22px); grid-template-rows:repeat(5,18px); border-left:2px solid #c8a97e66; border-top:2px solid #c8a97e66; }
-.fret-cell { border-right:1px solid #c8a97e22; border-bottom:1px solid #c8a97e22; display:flex; align-items:center; justify-content:center; }
-.dot { width:10px; height:10px; background:#c8a97e; border-radius:50%; }
-.open-mute { display:flex; margin-bottom:3px; }
-.om-mark { width:22px; text-align:center; font-size:10px; color:#ffffff33; }
-.om-mark.open { color:#c8a97e; }
-.fret-labels { display:flex; flex-direction:column; margin-right:4px; }
-.fret-label { height:18px; font-size:8px; color:#ffffff22; display:flex; align-items:center; }
+  --r-xs:8px;--r-sm:10px;--r-md:14px;--r-lg:18px;--r-xl:24px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s7:32px;--s8:40px;
+  --topbar-h:64px;--sidebar-w:248px;
+  --t-fast:150ms;--t-mid:240ms;
+  --ease:cubic-bezier(.22,.75,.24,1);
+  --font-display:'Sora','Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --font:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
 
-/* 播放器 */
+/* ===================== 设计令牌 · 浅色 ===================== */
+html[data-theme="light"]{
+  color-scheme:light;
+  --bg:#FBFAF5;
+  --bg-2:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F4F0E5;
+  --surface-3:#EAE3D2;
+  --elevated:#FFFFFF;
+  --border:rgba(60,45,20,.12);
+  --border-2:rgba(60,45,20,.20);
+  --text:#231C11;
+  --text-2:#5D5341;
+  --text-3:#8C816A;
+  --accent:#9A6608;
+  --accent-2:#7C5104;
+  --accent-ink:#FFFDF6;
+  --accent-soft:rgba(154,102,8,.12);
+  --accent-line:rgba(154,102,8,.30);
+  --glow-2:rgba(46,107,99,.12);
+  --danger:#B23A2E;
+  --warn:#8A6410;
+  --topbar-bg:rgba(251,250,245,.85);
+  --cover-a:#C2881C;
+  --cover-b:#2A2113;
+  --cover-c:#2A2113;
+  --piano-white:#FFFFFF;
+  --piano-black:#2A2117;
+  --piano-stroke:rgba(60,45,20,.20);
+  --piano-label:#8C816A;
+  --piano-label-active:#FFFDF6;
+  --scroll:rgba(60,45,20,.18);
+  --scroll-hover:rgba(60,45,20,.32);
+  --shadow-1:0 1px 0 rgba(60,45,20,.02), 0 10px 30px rgba(60,45,20,.09);
+  --shadow-2:0 30px 70px rgba(60,45,20,.18);
+  --modal-mask:rgba(35,26,12,.45);
+}
 
-.player-inner { display:flex; align-items:center; gap:12px; }
-.vinyl { width:40px; height:40px; border-radius:50%; background:conic-gradient(#2a1e10 0deg,#3d2c1a 90deg,#2a1e10 180deg,#3d2c1a 270deg); border:2px solid #c8a97e33; position:relative; flex-shrink:0; }
-.vinyl-dot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:8px; height:8px; background:#c8a97e; border-radius:50%; }
-.vinyl.spin { animation:spin 3s linear infinite; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.play-btn { width:36px; height:36px; background:#c8a97e; border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 0.2s; }
-.play-btn:hover { transform:scale(1.05); }
-.tri { width:0; height:0; border:5px solid transparent; border-left:11px solid #1a1208; margin-left:2px; }
-.bars { display:flex; gap:3px; align-items:center; }
-.bar { width:3px; height:10px; background:#1a1208; border-radius:2px; }
-.player-mid { flex:1; min-width:0; }
-.player-name { font-size:12px; color:#f0ede8; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.player-info { font-size:10px; color:#c8a97e66; }
-.prog-track { flex:1; height:2px; background:#3a2a18; border-radius:2px; }
-.prog-fill { height:100%; background:#c8a97e; border-radius:2px; width:0%; transition:width 0.1s; }
+/* ===================== 基础 ===================== */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.6;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(900px 560px at 50% -12%, var(--accent-soft), transparent 70%),
+             radial-gradient(760px 480px at 98% 112%, var(--glow-2), transparent 72%);
+}
+/* 「音符下落」：铺满整个创作工作台内容区，作为背景层 */
+#c{
+  position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;
+  -webkit-mask-image:radial-gradient(120% 105% at 50% 48%,rgba(0,0,0,.34),rgba(0,0,0,.62) 46%,#000 84%);
+  mask-image:radial-gradient(120% 105% at 50% 48%,rgba(0,0,0,.34),rgba(0,0,0,.62) 46%,#000 84%);
+}
+html.notes-off #c{opacity:0;transition:opacity .5s var(--ease)}
+button,input,textarea{font-family:inherit;font-size:inherit}
+button{cursor:pointer;color:inherit}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+::selection{background:var(--accent-soft)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--scroll-hover);background-clip:content-box;border:3px solid transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bop{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-6px);opacity:1}}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(16px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
-/* 歌词面板 */
-.lyrics-text { color:#f0ede8aa; font-size:14px; line-height:2.4; white-space:pre-wrap; }
+/* ===================== 应用外壳 ===================== */
+.app{position:relative;z-index:1;display:flex;height:100vh;height:100dvh}
 
-/* 对话面板 */
-.chat-panel { background:#1e1510; border:1px solid #3a2a18; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
-.chat-header { padding:16px 20px 12px; border-bottom:1px solid #3a2a18; flex-shrink:0; }
-.chat-title { font-size:12px; color:#c8a97e; letter-spacing:0.05em; }
-.chat-sub { font-size:10px; color:#ffffff33; margin-top:2px; }
-.chat-messages { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
-.msg { max-width:92%; }
-.msg-ai { align-self:flex-start; }
-.msg-user { align-self:flex-end; }
-.msg-bubble { padding:8px 12px; border-radius:12px; font-size:12px; line-height:1.7; }
-.msg-ai .msg-bubble { background:#251a0c; border:1px solid #3a2a18; color:#f0ede8aa; border-radius:4px 12px 12px 12px; }
-.msg-user .msg-bubble { background:#c8a97e22; border:1px solid #c8a97e33; color:#f0ede8; border-radius:12px 4px 12px 12px; }
-.msg-time { font-size:10px; color:#ffffff22; margin-top:3px; }
-.msg-ai .msg-time { text-align:left; }
-.msg-user .msg-time { text-align:right; }
-.chat-footer { padding:10px 12px; border-top:1px solid #3a2a18; flex-shrink:0; }
-.chat-input-row { display:flex; gap:8px; align-items:center; }
-.chat-input-row textarea { flex:1; background:#251a0c; border:1px solid #3a2a18; border-radius:10px; padding:8px 12px; color:#f0ede8; font-size:12px; resize:none; height:36px; font-family:inherit; outline:none; transition:border-color 0.2s; }
-.chat-input-row textarea:focus { border-color:#c8a97e44; }
-.chat-input-row textarea::placeholder { color:#ffffff22; }
-.send-btn { width:32px; height:32px; background:#c8a97e; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.send-btn:hover { background:#d4b88e; }
-.send-icon { width:0; height:0; border:4px solid transparent; border-left:9px solid #1a1208; margin-left:2px; }
-.typing { display:flex; gap:4px; padding:2px 0; }
-.typing-dot { width:4px; height:4px; background:#c8a97e66; border-radius:50%; animation:bop 1.2s ease-in-out infinite; }
-.typing-dot:nth-child(2){animation-delay:.2s;} .typing-dot:nth-child(3){animation-delay:.4s;}
+/* 侧边栏 */
+.sidebar{
+  width:var(--sidebar-w);flex:none;height:100%;
+  display:flex;flex-direction:column;gap:6px;
+  padding:18px 14px;
+  background:var(--bg-2);
+  border-right:1px solid var(--border);
+  position:relative;z-index:20;
+}
+.side-brand{display:flex;align-items:center;gap:11px;padding:6px 8px 18px;user-select:none}
+.brand-mark{
+  width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;
+  color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);
+}
+.brand-text{display:flex;flex-direction:column;line-height:1.12}
+.brand-name{font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:.02em}
+.brand-sub{font-family:var(--font-display);font-size:9px;font-weight:500;letter-spacing:.26em;color:var(--text-3);text-transform:uppercase}
+.side-nav{display:flex;flex-direction:column;gap:3px}
+.side-link{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:transparent;border:none;border-radius:11px;padding:11px 12px;
+  color:var(--text-2);font-size:14px;line-height:1.2;
+  transition:background var(--t-fast) var(--ease),color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
+}
+.side-link svg{flex:none;opacity:.9}
+.side-link:hover{background:var(--surface-2);color:var(--text)}
+.side-link.is-current{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-line)}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:14px}
+.upgrade-card{border-radius:var(--r-md);padding:16px;background:var(--surface-2);border:1px solid var(--border)}
+.upgrade-title{font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--text)}
+.upgrade-sub{font-size:11.5px;color:var(--text-3);margin:4px 0 12px;line-height:1.55}
+.upgrade-btn{width:100%;padding:9px;border-radius:9px;border:none;background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:600;transition:background var(--t-fast) var(--ease)}
+.upgrade-btn:hover{background:var(--accent-2)}
 
-.loading-full { position:absolute; top:52px; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:5; background:#1a1208; }
-.dots { display:flex; gap:8px; margin-bottom:12px; }
-.dot { width:5px; height:5px; background:#c8a97e; border-radius:50%; animation:bop 1.2s ease-in-out infinite; }
-.dot:nth-child(2){animation-delay:.2s;} .dot:nth-child(3){animation-delay:.4s;}
-@keyframes bop{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}
-.load-text { color:#ffffff33; font-size:13px; }
+/* 主区域 */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;height:100%}
+.topbar{
+  height:var(--topbar-h);flex:none;display:flex;align-items:center;gap:14px;
+  padding:0 24px;border-bottom:1px solid var(--border);
+  background:var(--topbar-bg);
+  backdrop-filter:blur(16px) saturate(150%);
+  -webkit-backdrop-filter:blur(16px) saturate(150%);
+  position:relative;z-index:15;
+}
+.topbar-title{font-family:var(--font-display);font-size:14px;font-weight:600;letter-spacing:.01em;color:var(--text)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-toggle{display:none;width:38px;height:38px;flex:none;place-items:center;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-2);transition:all var(--t-fast) var(--ease)}
+.nav-toggle:hover{color:var(--text);border-color:var(--border-2);background:var(--surface-2)}
+.theme-toggle{width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-2);display:grid;place-items:center;transition:all var(--t-fast) var(--ease)}
+.theme-toggle:hover{color:var(--text);border-color:var(--border-2);background:var(--surface-2)}
+html[data-theme="light"] .ico-sun{display:none}
+html:not([data-theme="light"]) .ico-moon{display:none}
+.user-chip{height:38px;padding:0 16px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:all var(--t-fast) var(--ease)}
+.user-chip:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.usage-bar{
+  display:none;align-items:center;gap:4px;white-space:nowrap;
+  background:var(--surface-2);border:1px solid var(--border-2);border-radius:99px;
+  padding:6px 13px;font-size:12px;color:var(--text-2);
+}
+.usage-bar.show{display:inline-flex;animation:fadeUp var(--t-mid) var(--ease)}
+.usage-bar span{color:var(--accent);font-family:var(--mono);font-weight:500}
 
-/* 弹窗遮罩 */
-.modal-mask { position:fixed; top:0; left:0; right:0; bottom:0; background:#00000088; z-index:100; display:none; align-items:center; justify-content:center; }
-.modal-mask.show { display:flex; }
-.modal-box { background:#251a0c; border:1px solid #3a2a18; border-radius:20px; padding:36px; width:360px; }
-.modal-title { font-size:18px; font-weight:300; color:#f0ede8; margin-bottom:8px; text-align:center; }
-.modal-sub { font-size:12px; color:#ffffff44; text-align:center; margin-bottom:28px; }
-.modal-btn { width:100%; padding:14px; border-radius:12px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; margin-bottom:10px; border:none; }
-.modal-btn-guest { background:#251a0c; border:1px solid #c8a97e44; color:#c8a97e; }
-.modal-btn-guest:hover { background:#c8a97e15; border-color:#c8a97e88; }
-.modal-btn-login { background:#c8a97e; color:#1a1208; }
-.modal-btn-login:hover { background:#d4b88e; }
-.modal-count { font-size:11px; color:#ffffff33; text-align:center; margin-top:4px; margin-bottom:16px; }
-.modal-close { display:block; text-align:center; font-size:12px; color:#ffffff33; cursor:pointer; margin-top:12px; }
-.modal-close:hover { color:#c8a97e; }
+.viewport{flex:1;min-height:0;position:relative}
+.nav-overlay{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:opacity var(--t-mid) var(--ease)}
+.app.nav-open ~ .nav-overlay{opacity:1;visibility:visible}
 
-/* 次数提示 */
-.usage-bar { position:fixed; top:60px; right:32px; z-index:9; background:#251a0c; border:1px solid #3a2a18; border-radius:8px; padding:6px 14px; font-size:11px; color:#ffffff44; display:none; }
-.usage-bar.show { display:block; }
-.usage-bar span { color:#c8a97e; }
+/* ===================== 首页 ===================== */
+#homePage{position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:40px 28px;z-index:1}
+.hero{max-width:760px;width:100%;margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-display);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);padding:7px 15px;border-radius:99px;
+  background:var(--accent-soft);border:1px solid var(--accent-line);margin-bottom:24px;
+}
+.hero-tag::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.hero-title{font-family:var(--font-display);font-size:clamp(32px,4.4vw,58px);font-weight:600;letter-spacing:-.02em;line-height:1.12;margin-bottom:18px;text-wrap:balance}
+.hero-title em{font-style:normal;color:var(--accent)}
+.hero-sub{font-size:15px;line-height:1.85;color:var(--text-2);max-width:580px;margin-bottom:34px}
+.console{
+  width:100%;text-align:left;background:var(--surface);border:1px solid var(--border-2);
+  border-radius:var(--r-xl);padding:20px 20px 16px;box-shadow:var(--shadow-1);
+  transition:border-color var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease);
+}
+.console:focus-within{border-color:var(--accent-line);box-shadow:var(--shadow-1),0 0 0 4px var(--accent-soft)}
+.console-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.console-label{font-family:var(--font-display);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3)}
+.console-hint{font-size:11.5px;color:var(--text-3)}
+#desc{width:100%;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:16px;line-height:1.75;resize:none;height:96px;padding:2px 0 0}
+#desc::placeholder{color:var(--text-3);opacity:.8}
+.console-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:16px;padding-top:14px}
+.inst-group{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.bar-label{font-size:11.5px;color:var(--text-3);margin-right:2px}
+.inst-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border);border-radius:99px;padding:6px 12px;color:var(--text-2);font-size:12.5px;line-height:1;transition:all var(--t-fast) var(--ease)}
+.inst-btn svg{width:15px;height:15px;flex:none}
+.inst-btn:hover{border-color:var(--border-2);color:var(--text);background:var(--surface-2)}
+.inst-btn.active{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.gen-btn{
+  display:inline-flex;align-items:center;gap:8px;background:var(--accent);border:none;border-radius:99px;
+  padding:12px 24px;color:var(--accent-ink);font-family:var(--font-display);font-size:14px;font-weight:600;
+  transition:background var(--t-fast) var(--ease),transform var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
+}
+.gen-btn:hover{background:var(--accent-2);transform:translateY(-1px);box-shadow:0 12px 28px var(--accent-soft)}
+.gen-btn:active{transform:translateY(0)}
+.ideas{margin-top:26px;width:100%;display:flex;flex-direction:column;align-items:center;gap:12px}
+.ideas-label{font-family:var(--font-display);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)}
+.idea-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.idea-chip{background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:8px 15px;font-size:12.5px;color:var(--text-2);transition:all var(--t-fast) var(--ease)}
+.idea-chip:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
 
-/* 登录注册页 */
-#authPage { position:relative; z-index:1; height:100vh; display:none; flex-direction:column; align-items:center; justify-content:center; padding:0 20px; }
-.auth-box { width:100%; max-width:400px; background:#251a0c; border:1px solid #3a2a18; border-radius:20px; padding:40px; }
-.auth-logo { font-size:13px; letter-spacing:0.15em; color:#c8a97e; text-align:center; margin-bottom:8px; }
-.auth-title { font-size:22px; font-weight:300; color:#f0ede8; text-align:center; margin-bottom:28px; }
-.auth-tabs { display:flex; background:#1a1208; border-radius:10px; padding:4px; margin-bottom:24px; }
-.auth-tab { flex:1; padding:8px; text-align:center; font-size:13px; color:#ffffff44; cursor:pointer; border-radius:8px; transition:all 0.2s; }
-.auth-tab.active { background:#3a2a18; color:#c8a97e; }
-.auth-input { width:100%; background:#1a1208; border:1px solid #3a2a18; border-radius:10px; padding:12px 16px; color:#f0ede8; font-size:14px; font-family:inherit; outline:none; margin-bottom:12px; transition:border-color 0.2s; }
-.auth-input:focus { border-color:#c8a97e44; }
-.auth-input::placeholder { color:#ffffff22; }
-.auth-submit { width:100%; padding:13px; background:#c8a97e; border:none; border-radius:10px; color:#1a1208; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; margin-top:4px; }
-.auth-submit:hover { background:#d4b88e; }
-.auth-back { display:block; text-align:center; font-size:12px; color:#ffffff33; cursor:pointer; margin-top:16px; transition:color 0.2s; }
-.auth-back:hover { color:#c8a97e; }
-.auth-err { font-size:12px; color:#e88; text-align:center; margin-bottom:12px; display:none; }
+/* ===================== 结果页 ===================== */
+#resultPage{position:absolute;inset:0;overflow-y:auto;display:none}
+.result-wrap{max-width:1460px;margin:0 auto;padding:26px 28px 48px}
+.result-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+.result-head-left{min-width:0}
+.back-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:none;padding:4px 0;margin-bottom:10px;font-size:12.5px;color:var(--text-3);transition:color var(--t-fast) var(--ease)}
+.back-btn:hover{color:var(--accent)}
+.result-title{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.meta-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:5px 13px;font-size:12px;color:var(--text-3)}
+.meta-chip span{color:var(--text);font-family:var(--mono);font-size:12px;font-weight:500}
+.result-head-right{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text-3);flex:none;padding-bottom:6px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* 作品卡片 / 播放器 */
+.song-card{
+  display:flex;align-items:center;gap:22px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow-1);
+}
+.song-cover{
+  width:108px;height:108px;flex:none;border-radius:var(--r-md);position:relative;overflow:hidden;
+  background:linear-gradient(150deg,var(--cover-b),var(--cover-a));
+  border:1px solid var(--border);display:grid;place-items:center;
+}
+.song-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(120px 80px at 30% 0%,rgba(255,255,255,.32),transparent 70%);pointer-events:none}
+.vinyl{width:58px;height:58px;border-radius:50%;position:relative;z-index:1;background:conic-gradient(from 0deg,rgba(0,0,0,.34),rgba(255,255,255,.12),rgba(0,0,0,.34),rgba(255,255,255,.12));border:1px solid rgba(255,255,255,.22);box-shadow:0 6px 18px rgba(0,0,0,.30)}
+.vinyl-dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:9px;height:9px;background:var(--accent);border-radius:50%}
+.vinyl.spin{animation:spin 3s linear infinite}
+.song-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:13px}
+.song-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.song-kicker{font-family:var(--font-display);font-size:10.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
+.player-inner{display:flex;align-items:center;gap:14px}
+.play-btn{width:46px;height:46px;flex:none;border:none;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;transition:transform var(--t-fast) var(--ease),background var(--t-fast) var(--ease)}
+.play-btn:hover{background:var(--accent-2);transform:scale(1.05)}
+.tri{width:0;height:0;border:6px solid transparent;border-left:12px solid var(--accent-ink);margin-left:3px}
+.bars{display:flex;gap:3px;align-items:center;height:14px}
+.bar{width:3px;height:14px;background:var(--accent-ink);border-radius:2px}
+.ctl-btn{width:40px;height:40px;flex:none;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--text-2);display:flex;align-items:center;justify-content:center;transition:all var(--t-fast) var(--ease)}
+.ctl-btn:hover{border-color:var(--border-2);color:var(--text);background:var(--surface-2)}
+.player-mid{min-width:0;flex:1;overflow:hidden}
+.player-name{font-size:13.5px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-info{font-size:11.5px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.vocal-guide-btn{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:99px;padding:9px 14px;font-size:12.5px;color:var(--accent);transition:all var(--t-fast) var(--ease)}
+.vocal-guide-btn:hover{background:var(--surface-2);border-color:var(--accent);transform:translateY(-1px)}
+.vocal-guide-btn svg{flex:none}
+.soon-badge{font-family:var(--font-display);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 6px}
+.dl-btn{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:transparent;border-radius:99px;padding:9px 16px;font-size:12.5px;color:var(--text-2);transition:all var(--t-fast) var(--ease)}
+.dl-btn:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.prog-track{height:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .1s linear}
+
+/* 工作室网格 */
+.studio{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:18px;align-items:start}
+.studio-main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.rtabs{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:4px;align-self:flex-start;max-width:100%;overflow-x:auto}
+.rtab{border:none;background:transparent;border-radius:9px;padding:8px 16px;font-size:13px;color:var(--text-3);white-space:nowrap;transition:all var(--t-fast) var(--ease)}
+.rtab:hover{color:var(--text)}
+.rtab.is-active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+.rtab-pane{display:none}
+.rtab-pane.is-active{display:block;animation:fadeUp var(--t-mid) var(--ease)}
+
+/* 面板 */
+.panels{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:14px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.panel-header{padding:16px 18px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panel-label{font-family:var(--font-display);font-size:10px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--text-3)}
+.panel-tag{font-size:11px;color:var(--text-3);font-family:var(--mono)}
+.panel-body{padding:16px 18px;max-height:min(60vh,620px);overflow-y:auto}
+
+/* 和弦 / 指板 */
+.chord-list{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chord-tag{
+  font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.02em;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  padding:9px 14px;color:var(--text-2);white-space:nowrap;cursor:pointer;
+  transition:all var(--t-fast) var(--ease);
+}
+.chord-tag:hover{border-color:var(--border-2);color:var(--text);background:var(--surface-3)}
+.chord-tag.active{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.chord-diag{display:none}
+.chord-diag.show{display:block;animation:fadeUp var(--t-mid) var(--ease)}
+.chord-name-big{font-family:var(--font-display);font-size:20px;font-weight:600;color:var(--accent);margin-bottom:14px}
+.diag-inner{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.diag-desc{font-size:12.5px;color:var(--text-3);line-height:1.95;flex:1;min-width:96px}
+#guitarDiag{--fret-w:25px}
+.open-mute{display:flex;margin-bottom:5px;padding-left:20px}
+.om-mark{width:var(--fret-w);text-align:center;font-size:12px;font-family:var(--mono);color:var(--text-3);opacity:.45}
+.om-mark.open{color:var(--text);opacity:.9}
+.fret-body{display:flex;gap:6px}
+.fret-labels{display:flex;flex-direction:column;margin-right:2px}
+.fret-label{height:24px;display:flex;align-items:center;font-size:9px;font-family:var(--mono);color:var(--text-3)}
+.fretboard-grid{
+  display:grid;grid-template-columns:repeat(6,var(--fret-w));grid-template-rows:repeat(5,24px);
+  border-left:2px solid var(--border-2);border-top:2px solid var(--border-2);border-radius:2px;
+}
+.fret-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.fret-cell .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.guitar-shape-note{font-size:10.5px;color:var(--text-3);font-family:var(--mono);margin-top:7px;line-height:1.55}
+.guitar-shape-note b{color:var(--accent);font-weight:600}
+.diag-piano{display:grid;place-items:center}
+
+/* 弹唱谱 */
+.lead-sheet{display:flex;flex-direction:column;gap:20px;padding:2px 0 20px}
+.score-section{display:flex;flex-direction:column;gap:11px}
+.score-section-title{
+  display:flex;align-items:center;gap:12px;margin:6px 0 2px;
+  font-family:var(--font-display);font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+}
+.score-section-title::after{content:'';height:1px;flex:1;background:var(--border)}
+.score-line{display:flex;align-items:flex-end;flex-wrap:wrap;row-gap:10px;min-height:46px}
+.score-segment{display:inline-flex;flex-direction:column;align-items:flex-start;margin-right:3px;min-width:0}
+.score-chord{
+  height:21px;display:flex;align-items:center;border:none;background:none;padding:0 3px;border-radius:5px;
+  color:var(--accent);font-family:var(--mono);font-size:12.5px;font-weight:500;line-height:1;
+  transition:background var(--t-fast) var(--ease),color var(--t-fast) var(--ease);
+}
+.score-chord:hover{background:var(--accent-soft)}
+.score-lyric{color:var(--text);font-size:15.5px;line-height:1.6;white-space:pre;padding:0 3px;letter-spacing:.01em}
+.score-empty{color:var(--text-3);font-size:13.5px;line-height:1.9}
+.score-plain-line{color:var(--text-2);font-size:15.5px;line-height:1.85}
+
+/* 编曲 / 灵感 */
+.arrange-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.arrange-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+.arrange-k{font-family:var(--font-display);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.arrange-v{font-family:var(--font-display);font-size:20px;font-weight:600;color:var(--text)}
+.arrange-sub{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5}
+.arrange-note{grid-column:1/-1;font-size:13px;color:var(--text-3);line-height:1.8;margin-top:4px}
+.insp-quote{font-size:15px;line-height:1.9;color:var(--text-2);border-left:3px solid var(--accent-line);padding-left:16px}
+
+/* 助手对话 */
+.assistant{
+  position:sticky;top:16px;height:calc(100dvh - var(--topbar-h) - 40px);
+  display:flex;flex-direction:column;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1);
+}
+.chat-header{padding:16px 18px 14px;border-bottom:1px solid var(--border);flex:none;display:flex;align-items:center;gap:11px}
+.chat-avatar{width:32px;height:32px;border-radius:10px;flex:none;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent)}
+.chat-title{font-family:var(--font-display);font-size:13.5px;font-weight:600;color:var(--text);letter-spacing:.01em}
+.chat-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:13px;min-height:0}
+.msg{max-width:92%;display:flex;flex-direction:column}
+.msg-ai{align-self:flex-start}
+.msg-user{align-self:flex-end;align-items:flex-end}
+.msg-bubble{padding:10px 14px;font-size:13px;line-height:1.75}
+.msg-ai .msg-bubble{background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);border-radius:4px 14px 14px 14px}
+.msg-user .msg-bubble{background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--text);border-radius:14px 4px 14px 14px}
+.msg-time{font-size:10px;color:var(--text-3);margin-top:5px}
+.chat-chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 12px;flex:none}
+.chip{background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:6px 12px;font-size:11.5px;color:var(--text-2);transition:all var(--t-fast) var(--ease)}
+.chip:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.chat-footer{padding:12px;border-top:1px solid var(--border);flex:none}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+#chatInput{
+  flex:1;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;
+  padding:11px 14px;color:var(--text);font-size:13px;line-height:1.6;resize:none;height:44px;max-height:120px;
+  outline:none;transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
+}
+#chatInput:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+#chatInput::placeholder{color:var(--text-3);opacity:.8}
+.send-btn{width:44px;height:44px;flex:none;background:var(--accent);border:none;border-radius:12px;color:var(--accent-ink);display:flex;align-items:center;justify-content:center;transition:background var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.send-btn:hover{background:var(--accent-2);transform:translateY(-1px)}
+.send-btn:active{transform:translateY(0)}
+.typing{display:flex;gap:4px;padding:3px 0}
+.typing-dot{width:5px;height:5px;background:var(--text-3);border-radius:50%;animation:bop 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+.update-prompt{padding:10px 14px;background:var(--accent-soft);border-top:1px solid var(--accent-line);text-align:center;flex:none}
+.up-row{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;color:var(--accent)}
+.up-btn{padding:5px 12px;background:var(--accent);border:none;border-radius:99px;color:var(--accent-ink);font-size:11.5px;font-weight:600;transition:background var(--t-fast) var(--ease)}
+.up-btn:hover{background:var(--accent-2)}
+
+/* ===================== 加载 ===================== */
+.loading-full{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg)}
+.loader{display:flex;flex-direction:column;align-items:center;gap:16px}
+.dots{display:flex;gap:8px}
+.dots .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bop 1.2s ease-in-out infinite}
+.dots .dot:nth-child(2){animation-delay:.2s}
+.dots .dot:nth-child(3){animation-delay:.4s}
+.load-text{color:var(--text-3);font-size:13px;letter-spacing:.08em}
+
+/* ===================== 弹窗 ===================== */
+.modal-mask{
+  position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+  background:var(--modal-mask);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px;
+}
+.modal-mask.show{display:flex;animation:fadeIn var(--t-mid) var(--ease)}
+.modal-box{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-xl);padding:32px 28px 24px;box-shadow:var(--shadow-2);animation:fadeUp var(--t-mid) var(--ease)}
+.modal-title{font-family:var(--font-display);font-size:20px;font-weight:600;text-align:center;color:var(--text)}
+.modal-sub{font-size:12.5px;color:var(--text-3);text-align:center;margin:6px 0 22px}
+.modal-btn{width:100%;padding:14px;border-radius:var(--r-md);border:none;font-size:14px;font-weight:600;transition:all var(--t-fast) var(--ease);margin-bottom:10px}
+.modal-btn-guest{background:transparent;border:1px solid var(--border-2);color:var(--text)}
+.modal-btn-guest:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.modal-btn-login{background:var(--accent);color:var(--accent-ink)}
+.modal-btn-login:hover{background:var(--accent-2)}
+.modal-count{font-size:11.5px;color:var(--text-3);text-align:center;margin:-2px 0 16px}
+.modal-close{display:block;text-align:center;font-size:12.5px;color:var(--text-3);cursor:pointer;margin-top:12px;transition:color var(--t-fast) var(--ease)}
+.modal-close:hover{color:var(--text)}
+
+/* 轻提示：替代被沙箱拦截的原生 alert，任何环境下都能看到反馈 */
+.od-toast-wrap{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;align-items:center;gap:8px;width:min(92vw,440px);pointer-events:none}
+.od-toast{width:100%;box-sizing:border-box;text-align:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);font-size:13.5px;line-height:1.55;padding:11px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-2);animation:fadeUp var(--t-mid) var(--ease)}
+.od-toast.is-out{opacity:0;transition:opacity var(--t-mid) var(--ease)}
+
+/* ===================== 登录注册 ===================== */
+#authPage{position:absolute;inset:0;overflow-y:auto;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.auth-box{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-xl);padding:34px 30px;box-shadow:var(--shadow-2)}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-bottom:16px}
+.auth-title{font-family:var(--font-display);font-size:24px;font-weight:600;text-align:center;color:var(--text);margin-bottom:22px}
+.auth-tabs{display:flex;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;color:var(--text-3);cursor:pointer;border-radius:9px;transition:all var(--t-fast) var(--ease)}
+.auth-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+.auth-err{font-size:12.5px;color:var(--danger);text-align:center;margin-bottom:12px;display:none}
+.auth-input{width:100%;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px;transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}
+.auth-input:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.auth-input::placeholder{color:var(--text-3);opacity:.8}
+.auth-submit{width:100%;padding:14px;background:var(--accent);border:none;border-radius:12px;color:var(--accent-ink);font-size:14px;font-weight:600;transition:background var(--t-fast) var(--ease);margin-top:6px}
+.auth-submit:hover{background:var(--accent-2)}
+.auth-back{display:block;text-align:center;font-size:12.5px;color:var(--text-3);cursor:pointer;margin-top:16px;transition:color var(--t-fast) var(--ease)}
+.auth-back:hover{color:var(--accent)}
+
+/* ===================== 刷新提示 ===================== */
+.update-hint{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99;
+  display:none;align-items:center;gap:8px;
+  background:var(--surface-2);border:1px solid var(--border-2);border-radius:99px;
+  padding:11px 20px;font-size:12.5px;color:var(--text);box-shadow:var(--shadow-2);
+}
+.update-hint.show{display:flex;animation:slideUp var(--t-mid) var(--ease)}
+
+/* ===================== 子页面：我的作品 / 作品助手 / 发现 ===================== */
+#worksPage,#assistantPage,#discoverPage{position:absolute;inset:0;overflow-y:auto;display:none;z-index:1}
+.page-wrap{max-width:1120px;margin:0 auto;padding:34px 28px 60px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.page-head-main{min-width:0}
+.page-eyebrow{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.page-eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
+.page-title{font-family:var(--font-display);font-size:clamp(23px,3vw,32px);font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.page-sub{font-size:14px;color:var(--text-2);margin-top:10px;line-height:1.8;max-width:640px}
+.page-count{font-size:12.5px;color:var(--text-3);font-family:var(--mono);flex:none;padding-bottom:6px}
+
+/* 筛选药丸 */
+.filter-row{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:4px;margin-top:22px;max-width:100%;overflow-x:auto}
+.filter-pill{border:none;background:transparent;border-radius:9px;padding:8px 15px;font-size:12.5px;color:var(--text-3);white-space:nowrap;transition:all var(--t-fast) var(--ease)}
+.filter-pill:hover{color:var(--text)}
+.filter-pill.is-active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+
+/* 作品栅格 */
+.works-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:16px;margin-top:22px}
+.work-card{display:flex;flex-direction:column;gap:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px;box-shadow:var(--shadow-1);transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}
+.work-card:hover{transform:translateY(-3px);border-color:var(--border-2);box-shadow:var(--shadow-2)}
+.work-cover{position:relative;height:104px;border-radius:var(--r-md);overflow:hidden;background:linear-gradient(150deg,var(--cover-b),var(--cover-a));border:1px solid var(--border-2);display:grid;place-items:center}
+.work-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(130px 90px at 26% -10%,rgba(255,255,255,.28),transparent 70%);pointer-events:none}
+.work-cover .note-glyph{position:absolute;right:9px;bottom:-18px;z-index:0;font-family:var(--font-display);font-size:78px;line-height:1;color:rgba(255,255,255,.16);pointer-events:none}
+.cover-eq{position:relative;z-index:1;display:flex;align-items:flex-end;gap:4px;height:30px}
+.cover-eq i{width:4px;border-radius:99px;background:rgba(255,255,255,.92)}
+.cover-eq i:nth-child(1){height:11px}
+.cover-eq i:nth-child(2){height:21px}
+.cover-eq i:nth-child(3){height:30px}
+.cover-eq i:nth-child(4){height:16px}
+.cover-eq i:nth-child(5){height:24px}
+.work-body{display:flex;flex-direction:column;gap:9px;min-width:0}
+.work-title{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--text)}
+.work-desc{font-size:12.5px;color:var(--text-3);line-height:1.7}
+.work-chips{display:flex;flex-wrap:wrap;gap:6px}
+.work-chip{font-size:11px;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:4px 10px}
+.work-chip b{color:var(--text-2);font-family:var(--mono);font-weight:500}
+.work-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:4px}
+.work-date{font-size:11px;color:var(--text-3)}
+.work-actions{display:flex;gap:6px}
+.mini-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:transparent;border-radius:9px;padding:7px 11px;font-size:11.5px;color:var(--text-2);transition:all var(--t-fast) var(--ease)}
+.mini-btn:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.mini-btn.primary{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
+.mini-btn.primary:hover{background:var(--accent-2);color:var(--accent-ink)}
+.demo-badge{position:absolute;top:9px;right:9px;z-index:2;font-size:10px;letter-spacing:.08em;color:var(--text);background:var(--surface);border:1px solid var(--border-2);border-radius:99px;padding:3px 8px}
+
+/* 空状态 */
+.empty-state{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:64px 24px;margin-top:22px;background:var(--surface);border:1px dashed var(--border-2);border-radius:var(--r-xl)}
+.empty-icon{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.empty-title{font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--text)}
+.empty-sub{font-size:13px;color:var(--text-3);line-height:1.8;max-width:380px}
+
+/* 作品助手 */
+.asst-grid{display:grid;grid-template-columns:minmax(0,306px) minmax(0,1fr);gap:18px;margin-top:22px;align-items:start}
+.asst-list{display:flex;flex-direction:column;gap:6px}
+.asst-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:var(--r-md);padding:11px 12px;transition:all var(--t-fast) var(--ease)}
+.asst-row:hover{background:var(--surface-2);border-color:var(--border)}
+.asst-row.is-active{background:var(--accent-soft);border-color:var(--accent-line)}
+.asst-thumb{width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;color:rgba(255,255,255,.94);background:linear-gradient(150deg,var(--cover-b),var(--cover-a));font-family:var(--font-display);font-size:16px}
+.asst-row-t{min-width:0;flex:1;display:block}
+.asst-row-name{font-size:13.5px;font-weight:500;color:var(--text);display:block}
+.asst-row-meta{font-size:11px;color:var(--text-3);margin-top:1px;display:block}
+.asst-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-1)}
+.asst-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.asst-panel-title{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--text)}
+.asst-panel-sub{font-size:12.5px;color:var(--text-3);margin-top:6px;line-height:1.7;max-width:480px}
+.suggest-label{font-family:var(--font-display);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px}
+.suggest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:12px}
+.suggest-card{display:flex;flex-direction:column;gap:7px;text-align:left;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:15px;transition:all var(--t-fast) var(--ease)}
+.suggest-card:hover{border-color:var(--accent-line);background:var(--accent-soft);transform:translateY(-2px)}
+.suggest-card .sc-t{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:var(--text)}
+.suggest-card .sc-t svg{color:var(--accent);flex:none}
+.suggest-card .sc-d{font-size:11.5px;color:var(--text-3);line-height:1.6}
+.asst-empty{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:52px 24px;color:var(--text-3);font-size:13px;line-height:1.8}
+.asst-empty svg{color:var(--accent);opacity:.85}
+
+/* 发现 */
+.disc-section{margin-top:30px}
+.disc-label{display:flex;align-items:center;gap:12px;font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px}
+.disc-label::after{content:'';height:1px;flex:1;background:var(--border)}
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.disc-card{display:flex;flex-direction:column;gap:9px;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px;box-shadow:var(--shadow-1);transition:all var(--t-fast) var(--ease)}
+.disc-card:hover{transform:translateY(-3px);border-color:var(--accent-line);box-shadow:var(--shadow-2)}
+.disc-card-top{display:flex;align-items:center;gap:10px}
+.disc-ico{width:36px;height:36px;flex:none;border-radius:11px;display:grid;place-items:center;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.disc-name{font-family:var(--font-display);font-size:14.5px;font-weight:600;color:var(--text)}
+.disc-desc{font-size:12.5px;color:var(--text-3);line-height:1.7}
+.disc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.disc-tag{font-size:10.5px;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:3px 9px}
+
+@media (max-width:1080px){.asst-grid{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .page-wrap{padding:24px 16px 48px}
+  .works-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .suggest-grid{grid-template-columns:1fr}
+}
+@media (max-width:480px){.works-grid{grid-template-columns:1fr}}
+
+/* ===================== 响应式 ===================== */
+@media (max-width:1280px){
+  .studio{grid-template-columns:minmax(0,1fr) 336px}
+  .result-wrap{padding:24px 22px 44px}
+}
+@media (max-width:1080px){
+  .studio{grid-template-columns:1fr}
+  .assistant{position:static;height:560px}
+  .panels{grid-template-columns:minmax(240px,300px) minmax(0,1fr)}
+}
+@media (max-width:1024px){
+  :root{--sidebar-w:74px}
+  .sidebar{padding:16px 9px}
+  .brand-text,.side-link .label,.side-foot{display:none}
+  .side-brand{justify-content:center;padding:6px 0 16px}
+  .side-link{justify-content:center;padding:12px 0;gap:0}
+}
+@media (max-width:820px){
+  .panels{grid-template-columns:1fr}
+  .panel-body{max-height:min(52vh,520px)}
+}
+@media (max-width:760px){
+  :root{--topbar-h:58px}
+  .topbar{padding:0 16px;gap:10px}
+  .nav-toggle{display:grid}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:252px;height:100%;
+    transform:translateX(-102%);transition:transform var(--t-mid) var(--ease);
+    box-shadow:var(--shadow-2);padding:18px 14px;
+  }
+  .app.nav-open .sidebar{transform:none}
+  .brand-text{display:flex}
+  .side-link .label{display:inline}
+  .side-link{justify-content:flex-start;padding:11px 12px;gap:11px}
+  .side-brand{justify-content:flex-start;padding:6px 10px 18px}
+  .side-foot{display:flex}
+  #homePage{padding:28px 18px}
+  .hero-sub{font-size:14px;margin-bottom:26px}
+  .console-foot{align-items:stretch}
+  .gen-btn{width:100%;justify-content:center}
+  .result-wrap{padding:18px 16px 40px}
+  .result-title{font-size:21px}
+  .result-head-right{display:none}
+  .song-card{flex-direction:row;align-items:flex-start;gap:16px;padding:16px}
+  .song-cover{width:84px;height:84px}
+  .vinyl{width:46px;height:46px}
+  .player-mid{min-width:0}
+  .usage-bar{display:none!important}
+}
+@media (max-width:480px){
+  .brand-sub{display:none}
+  .user-chip{max-width:120px;padding:0 12px}
+  .song-card{flex-direction:column;align-items:stretch}
+  .song-cover{width:100%;height:120px}
+  .song-top{align-items:flex-start;flex-direction:column}
+  .song-top-actions{width:100%;justify-content:flex-start}
+  .modal-box{padding:26px 20px}
+  .auth-box{padding:28px 20px}
+}
+@media (min-width:761px){.nav-overlay{display:none}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
+/* ===================== 精修层 · Bright Studio ===================== */
+.hero-title{line-height:1.1}
+.result-title,.page-title,.asst-panel-title,.modal-title,.auth-title{letter-spacing:-.015em}
+html:not([data-theme="light"]) .console,
+html:not([data-theme="light"]) .song-card,
+html:not([data-theme="light"]) .work-card,
+html:not([data-theme="light"]) .disc-card,
+html:not([data-theme="light"]) .asst-panel,
+html:not([data-theme="light"]) .assistant{box-shadow:var(--shadow-1),inset 0 1px 0 rgba(255,255,255,.045)}
+html:not([data-theme="light"]) .console:focus-within{box-shadow:var(--shadow-1),inset 0 1px 0 rgba(255,255,255,.045),0 0 0 4px var(--accent-soft)}
 </style>
+<script defer src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+<script defer src="https://unpkg.com/@tonejs/midi@2.0.28/build/Midi.js"></script>
 </head>
 <body>
-<canvas id="c"></canvas>
-<nav>
-  <div class="nav-logo">声织</div>
-  <div class="nav-links">
-    <div class="nav-link" onclick="showPage('home')">创作</div>
-    <div class="nav-link">历史</div>
-    <div class="nav-link">关于</div>
-  </div>
-</nav>
+<div class="app">
+  <aside class="sidebar">
+    <div class="side-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <path d="M4 14v-4"/><path d="M8 17V7"/><path d="M12 20V4"/><path d="M16 17V7"/><path d="M20 14v-4"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">声织</span>
+        <span class="brand-sub">SoundWeaver</span>
+      </span>
+    </div>
+    <nav class="side-nav">
+      <button class="side-link is-current" data-page="home" onclick="showPage('home')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span class="label">创作</span>
+      </button>
+      <button class="side-link" data-page="works" onclick="showPage('works')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M8 4v16"/><path d="M13 9h4"/><path d="M13 13h4"/></svg>
+        <span class="label">我的作品</span>
+      </button>
+      <button class="side-link" data-page="assistant" onclick="showPage('assistant')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M7 8v8"/><path d="M17 8v8"/><path d="M3 11v2"/><path d="M21 11v2"/></svg>
+        <span class="label">作品助手</span>
+      </button>
+      <button class="side-link" data-page="discover" onclick="showPage('discover')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5Z"/></svg>
+        <span class="label">发现</span>
+      </button>
+    </nav>
+    <div class="side-foot">
+      <div class="upgrade-card">
+        <div class="upgrade-title">升级创作权益</div>
+        <div class="upgrade-sub">解锁更长时长、更多风格与高清导出</div>
+        <button class="upgrade-btn" onclick="showAuth('register')">了解会员</button>
+      </div>
+    </div>
+  </aside>
 
+  <div class="main">
+    <header class="topbar">
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="打开菜单">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+      </button>
+      <div class="topbar-title" id="topbarTitle">创作工作台</div>
+      <div class="topbar-right">
+        <div class="usage-bar" id="usageBar">今日剩余 <span id="usageCount">8</span> 次</div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换浅色 / 深色主题" title="切换浅色 / 深色主题">
+          <svg class="ico-moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
+        </button>
+        <button class="user-chip" id="userChip" onclick="onUserChip()" title="登录 / 退出">登录 / 注册</button>
+      </div>
+    </header>
+
+    <div class="viewport">
+      <canvas id="c" aria-hidden="true"></canvas>
+      <!-- ==================== 首页 ==================== -->
+      <div id="homePage">
+        <div class="hero">
+          <span class="hero-tag">灵感落地 · 音乐成形</span>
+          <h1 class="hero-title">用一句话<br>让灵感变成<em>一首歌</em></h1>
+          <p class="hero-sub">描述你的情绪、场景与风格，声织会自动生成和弦、歌词与 MIDI 伴奏。你的每一种情绪，都值得成为音符。</p>
+          <div class="console">
+            <div class="console-top">
+              <span class="console-label">创作描述</span>
+              <span class="console-hint">描述越具体，作品越贴近你</span>
+            </div>
+            <textarea id="desc" placeholder="例如：一首关于冬夜独自回家的温暖民谣，木吉他，慢速，略带伤感…"></textarea>
+            <div class="console-foot">
+              <div class="inst-group">
+                <span class="bar-label">主乐器</span>
+                <button class="inst-btn active" onclick="selInst(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M8.5 5.5v6.5"/><path d="M12 5.5v6.5"/><path d="M15.5 5.5v6.5"/></svg>钢琴</button>
+                <button class="inst-btn" onclick="selInst(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="16.5" r="5"/><circle cx="12" cy="9.8" r="3"/><circle cx="12" cy="13" r="1.5"/><path d="M12 6.8V3"/><path d="M10.2 3h3.6"/></svg>木吉他</button>
+                <button class="inst-btn" onclick="selInst(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="11" width="10" height="10.5" rx="5"/><path d="M9 13h6"/><path d="M9 15.5h6"/><path d="M12 11V3"/><path d="M10.2 3h3.6"/></svg>电吉他</button>
+              </div>
+              <button class="gen-btn" onclick="onGenClick()">
+                <span>生成音乐</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ideas">
+            <span class="ideas-label">试试这些灵感</span>
+            <div class="idea-row">
+              <button class="idea-chip" onclick="useIdea(this)">夜晚城市里的孤独爵士</button>
+              <button class="idea-chip" onclick="useIdea(this)">夏夜海边的轻快民谣</button>
+              <button class="idea-chip" onclick="useIdea(this)">失恋后雨中的慢摇滚</button>
+              <button class="idea-chip" onclick="useIdea(this)">清晨醒来的温柔钢琴曲</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 结果页 ==================== -->
+      <div id="resultPage">
+        <div id="loadingFull" class="loading-full">
+          <div class="loader">
+            <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            <div class="load-text">AI 正在创作中...</div>
+          </div>
+        </div>
+
+        <div id="mainContent" style="display:none;">
+          <div class="result-wrap">
+            <div class="result-head">
+              <div class="result-head-left">
+                <button class="back-btn" onclick="showPage('home')">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>
+                  <span>重新创作</span>
+                </button>
+                <h2 class="result-title" id="rTitle"></h2>
+                <div class="meta-row" id="rMeta"></div>
+              </div>
+              <div class="result-head-right">
+                <span class="live-dot"></span><span>当前作品</span>
+              </div>
+            </div>
+
+            <!-- 作品卡片 / 播放器 -->
+            <div class="song-card">
+              <div class="song-cover"><div class="vinyl" id="vinyl"><div class="vinyl-dot"></div></div></div>
+              <div class="song-main">
+                <div class="song-top">
+                  <span class="song-kicker">MIDI 伴奏 · 可下载</span>
+                  <div class="song-top-actions">
+                    <button class="vocal-guide-btn" onclick="showVocalGuideComingSoon()" title="人声导唱即将上线">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="3" width="6" height="11" rx="3"/>
+                        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/>
+                        <path d="M12 18v3"/>
+                        <path d="M9 21h6"/>
+                      </svg>
+                      <span>人声导唱</span>
+                      <span class="soon-badge">即将上线</span>
+                    </button>
+                    <button class="dl-btn" onclick="downloadMidi()">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg>
+                      <span>下载 MIDI</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="player-inner">
+                  <button class="play-btn" onclick="togglePlay()" aria-label="播放 / 暂停"><div class="tri" id="playIcon"></div></button>
+                  <button class="ctl-btn" onclick="stopPlay()" aria-label="停止">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                  </button>
+                  <div class="player-mid">
+                    <div class="player-name" id="pName">准备播放</div>
+                    <div class="player-info" id="pInfo">点击播放 MIDI 伴奏</div>
+                  </div>
+                </div>
+                <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
+              </div>
+            </div>
+
+            <!-- 工作室 -->
+            <div class="studio">
+              <div class="studio-main">
+                <div class="rtabs">
+                  <button class="rtab is-active" data-tab="score" onclick="switchResultTab('score')">歌词与和弦</button>
+                  <button class="rtab" data-tab="arrange" onclick="switchResultTab('arrange')">编曲配置</button>
+                  <button class="rtab" data-tab="idea" onclick="switchResultTab('idea')">灵感说明</button>
+                </div>
+
+                <div class="rtab-pane is-active" data-pane="score">
+                  <div class="panels">
+                    <!-- 和弦 -->
+                    <div class="panel chords">
+                      <div class="panel-header">
+                        <span class="panel-label">和弦进行</span>
+                        <span class="panel-tag" id="chordHintTag">点击查看指法</span>
+                      </div>
+                      <div class="panel-body">
+                        <div class="chord-list" id="rChords"></div>
+                        <div class="chord-diag" id="chordDiag">
+                          <div class="chord-name-big" id="diagName"></div>
+                          <div class="diag-inner">
+                            <div id="guitarDiag">
+                              <div class="open-mute" id="diagOM"></div>
+                              <div class="fret-body">
+                                <div class="fret-labels" id="diagFrets"></div>
+                                <div class="fretboard-grid" id="diagGrid"></div>
+                              </div>
+                            </div>
+                            <div class="diag-piano" id="pianoDiag" style="display:none;">
+                              <svg id="pianoSvg" width="150" height="85" viewBox="0 0 150 85"></svg>
+                            </div>
+                            <div class="diag-desc" id="diagDesc"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 弹唱谱 -->
+                    <div class="panel score">
+                      <div class="panel-header">
+                        <span class="panel-label">弹唱谱</span>
+                        <span class="panel-tag">和弦在上 · 歌词在下</span>
+                      </div>
+                      <div class="panel-body">
+                        <div class="lyrics-text" id="rLyrics"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rtab-pane" data-pane="arrange">
+                  <div class="panel">
+                    <div class="panel-header">
+                      <span class="panel-label">编曲配置</span>
+                      <span class="panel-tag">由 AI 自动生成</span>
+                    </div>
+                    <div class="panel-body" id="rArrangement"></div>
+                  </div>
+                </div>
+
+                <div class="rtab-pane" data-pane="idea">
+                  <div class="panel">
+                    <div class="panel-header">
+                      <span class="panel-label">灵感说明</span>
+                      <span class="panel-tag">最初的创作描述</span>
+                    </div>
+                    <div class="panel-body" id="rInspiration"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 助手 -->
+              <aside class="assistant">
+                <div class="chat-header">
+                  <span class="chat-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M7 8v8"/><path d="M17 8v8"/><path d="M3 11v2"/><path d="M21 11v2"/></svg>
+                  </span>
+                  <div>
+                    <div class="chat-title">与声织对话</div>
+                    <div class="chat-sub">修改歌词、调整风格、解释和弦...</div>
+                  </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                  <div class="msg msg-ai">
+                    <div class="msg-bubble">你好！我已经为你生成了这首曲子，有什么想修改的吗？</div>
+                    <div class="msg-time">刚刚</div>
+                  </div>
+                </div>
+                <div class="chat-chips">
+                  <button class="chip" onclick="quickChat(this)">改得更轻快</button>
+                  <button class="chip" onclick="quickChat(this)">换一个副歌</button>
+                  <button class="chip" onclick="quickChat(this)">降低 BPM</button>
+                </div>
+                <div id="updatePrompt" class="update-prompt" style="display:none;">
+                  <span class="up-row">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    <span>音乐已修改</span>
+                    <button class="up-btn" onclick="applyUpdates()">点击更新</button>
+                  </span>
+                </div>
+                <div class="chat-footer">
+                  <div class="chat-input-row">
+                    <textarea id="chatInput" placeholder="问我任何关于这首歌的问题..." onkeydown="handleKey(event)"></textarea>
+                    <button class="send-btn" onclick="sendChat()" aria-label="发送">
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6L4 12z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 我的作品 ==================== -->
+      <div id="worksPage">
+        <div class="page-wrap">
+          <div class="page-head">
+            <div class="page-head-main">
+              <div class="page-eyebrow">我的作品</div>
+              <h2 class="page-title">作品库</h2>
+              <p class="page-sub">你生成过的曲子都会留在这里。打开任意一首继续编辑，或回到创作台开始新的灵感。</p>
+            </div>
+            <span class="page-count" id="worksCount"></span>
+          </div>
+          <div class="filter-row" id="worksFilter">
+            <button class="filter-pill is-active" data-kind="all" onclick="filterWorks('all',this)">全部</button>
+            <button class="filter-pill" data-kind="钢琴" onclick="filterWorks('钢琴',this)">钢琴</button>
+            <button class="filter-pill" data-kind="吉他" onclick="filterWorks('吉他',this)">吉他</button>
+          </div>
+          <div class="works-grid" id="worksGrid"></div>
+        </div>
+      </div>
+
+      <!-- ==================== 作品助手 ==================== -->
+      <div id="assistantPage">
+        <div class="page-wrap">
+          <div class="page-head">
+            <div class="page-head-main">
+              <div class="page-eyebrow">作品助手</div>
+              <h2 class="page-title">和声织一起打磨</h2>
+              <p class="page-sub">选一首你的作品，助手会给出可以立刻执行的修改建议，点一下就能带着指令回到这首歌的工作台。</p>
+            </div>
+          </div>
+          <div class="asst-grid">
+            <div class="asst-panel" style="padding:14px">
+              <div class="suggest-label" style="padding:6px 6px 8px">选择作品</div>
+              <div class="asst-list" id="assistantList"></div>
+            </div>
+            <div class="asst-panel" id="assistantPanel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 发现 ==================== -->
+      <div id="discoverPage">
+        <div class="page-wrap">
+          <div class="page-head">
+            <div class="page-head-main">
+              <div class="page-eyebrow">发现</div>
+              <h2 class="page-title">灵感模板库</h2>
+              <p class="page-sub">按情绪和风格挑一个起点，点一下就把描述填进创作台——你可以再改，然后生成属于你的版本。</p>
+            </div>
+          </div>
+          <div id="discoverBody"></div>
+        </div>
+      </div>
+
+      <!-- ==================== 登录注册 ==================== -->
+      <div id="authPage">
+        <div class="auth-box">
+          <div class="auth-logo">声织 · SoundWeaver</div>
+          <div class="auth-title" id="authTitle">欢迎回来</div>
+          <div class="auth-tabs">
+            <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">登录</div>
+            <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">注册</div>
+          </div>
+          <div class="auth-err" id="authErr"></div>
+          <input class="auth-input" id="authUsername" type="text" placeholder="用户名">
+          <input class="auth-input" id="authPassword" type="password" placeholder="密码">
+          <button class="auth-submit" onclick="submitAuth()">登录</button>
+          <span class="auth-back" onclick="showPage('home')">← 返回首页</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav-overlay" onclick="toggleNav()"></div>
+
+<div class="update-hint" id="updateHint"></div>
 
 <!-- 选择弹窗 -->
 <div class="modal-mask" id="choiceModal">
@@ -196,240 +1075,978 @@ nav { position:fixed; top:0; left:0; right:0; z-index:10; display:flex; justify-
     <span class="modal-close" onclick="closeModal()">取消</span>
   </div>
 </div>
-
-<!-- 次数提示 -->
-<div class="usage-bar" id="usageBar">今日剩余 <span id="usageCount">8</span> 次</div>
-
-<!-- 登录注册页 -->
-<div id="authPage">
-  <div class="auth-box">
-    <div class="auth-logo">声织</div>
-    <div class="auth-title" id="authTitle">欢迎回来</div>
-    <div class="auth-tabs">
-      <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">登录</div>
-      <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">注册</div>
-    </div>
-    <div class="auth-err" id="authErr"></div>
-    <input class="auth-input" id="authUsername" type="text" placeholder="用户名">
-    <input class="auth-input" id="authPassword" type="password" placeholder="密码">
-    <button class="auth-submit" onclick="submitAuth()">登录</button>
-    <span class="auth-back" onclick="showPage('home')">← 返回首页</span>
-  </div>
-</div>
-
-<div id="homePage">
-  <div class="hero-tag">灵感落地，音乐成形</div>
-  <h1 class="hero-title">用一句话<br>写一首<em>属于你</em>的歌</h1>
-  <p class="hero-sub">描述情绪与风格，AI 自动生成和弦、歌词与 MIDI 伴奏，为创作型音乐爱好者及博主提供灵感起点。你的每一种情绪，都值得成为音符</p>
-  <div class="input-card">
-    <textarea id="desc" placeholder="一首忧郁的失恋慢歌，有点爵士的感觉..."></textarea>
-    <div class="divider"></div>
-    <div class="input-actions">
-      <div class="inst-group">
-        <button class="inst-btn active" onclick="selInst(this)">钢琴</button>
-        <button class="inst-btn" onclick="selInst(this)">木吉他</button>
-        <button class="inst-btn" onclick="selInst(this)">电吉他</button>
-      </div>
-      <button class="gen-btn" onclick="onGenClick()">生成灵感 →</button>
-    </div>
-  </div>
-</div>
-
-<div id="resultPage">
-  <div id="loadingFull" class="loading-full">
-    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    <div class="load-text">AI 正在创作中...</div>
-  </div>
-  <div id="mainContent" style="display:none;">
-    <!-- 整体flex横排，对话框占全高 -->
-    <div style="display:flex; gap:12px; padding:0 28px 20px; height:calc(100vh - 52px); align-items:flex-end;">
-
-      <!-- 左边大块：标题+三个区域 -->
-      <div style="flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; height:100%;">
-
-        <!-- 标题区 -->
-        <div style="flex-shrink:0; padding-top:16px;">
-          <div class="back-btn" onclick="showPage('home')">← 重新创作</div>
-          <div class="result-title" id="rTitle"></div>
-          <div class="meta-row" id="rMeta"></div>
-        </div>
-
-        <!-- 和弦+歌词两列 -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:1; min-height:0;">
-          <!-- 和弦 -->
-          <div class="panel">
-            <div class="panel-header"><div class="panel-label">和弦进行</div></div>
-            <div class="panel-body">
-              <div class="chord-list" id="rChords"></div>
-              <div class="chord-diag" id="chordDiag">
-                <div class="chord-name-big" id="diagName"></div>
-                <div class="diag-inner">
-                  <div id="guitarDiag">
-                    <div class="open-mute" id="diagOM"></div>
-                    <div style="display:flex;gap:4px;">
-                      <div class="fret-labels" id="diagFrets"></div>
-                      <div class="fretboard-grid" id="diagGrid"></div>
-                    </div>
-                  </div>
-                  <div id="pianoDiag" style="display:none;">
-                    <svg id="pianoSvg" width="150" height="85" viewBox="0 0 150 85"></svg>
-                  </div>
-                  <div class="diag-desc" id="diagDesc"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- 歌词 -->
-          <div class="panel">
-            <div class="panel-header"><div class="panel-label">歌词</div></div>
-            <div class="panel-body">
-              <div class="lyrics-text" id="rLyrics"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 播放器 -->
-        <div class="panel" style="flex-shrink:0; padding:14px 20px;">
-          <div class="player-inner">
-            <div class="vinyl" id="vinyl"><div class="vinyl-dot"></div></div>
-            <button class="play-btn" onclick="togglePlay()" style="margin:0 12px;"><div class="tri" id="playIcon"></div></button>
-            <div class="player-mid">
-              <div class="player-name" id="pName">准备播放</div>
-              <div class="player-info" id="pInfo">点击播放 MIDI 伴奏</div>
-            </div>
-            <div class="prog-track" style="flex:1;"><div class="prog-fill" id="prog"></div></div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- 右边：对话框全高，从nav到底 -->
-      <div class="chat-panel" style="width:380px; flex-shrink:0; height:100%; padding-bottom:0;">
-        <div class="chat-header">
-          <div class="chat-title">与声织对话</div>
-          <div class="chat-sub">修改歌词、调整风格、解释和弦...</div>
-        </div>
-        <div class="chat-messages" id="chatMessages">
-          <div class="msg msg-ai">
-            <div class="msg-bubble">你好！我已经为你生成了这首曲子，有什么想修改的吗？</div>
-            <div class="msg-time">刚刚</div>
-          </div>
-        </div>
-        <div class="chat-footer">
-          <div class="chat-input-row">
-            <textarea id="chatInput" placeholder="问我任何关于这首歌的问题..." onkeydown="handleKey(event)"></textarea>
-            <button class="send-btn" onclick="sendChat()"><div class="send-icon"></div></button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
 <script>
-const cv=document.getElementById('c'),cx=cv.getContext('2d');
-let W,H,ns=[];
-const NC=['♩','♪','♫','♬','𝄞','𝄢','♭','♮','♯'];
-function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
-function init(){ns=[];for(let i=0;i<Math.floor(W/65);i++)ns.push({x:Math.random()*W,y:Math.random()*H-H,spd:0.4+Math.random()*0.7,sz:11+Math.random()*13,ch:NC[~~(Math.random()*NC.length)],op:0.15+Math.random()*0.2,dx:(Math.random()-.5)*.3,rot:Math.random()*Math.PI*2,rs:(Math.random()-.5)*.012});}
-function frame(){cx.clearRect(0,0,W,H);ns.forEach(n=>{cx.save();cx.translate(n.x,n.y);cx.rotate(n.rot);cx.font=`${n.sz}px serif`;cx.fillStyle=`rgba(215,205,190,${n.op})`;cx.fillText(n.ch,0,0);cx.restore();n.y+=n.spd;n.x+=n.dx;n.rot+=n.rs;if(n.y>H+30){n.y=-30;n.x=Math.random()*W;}});requestAnimationFrame(frame);}
-resize();init();frame();window.addEventListener('resize',()=>{resize();init();});
+const safeStorage=(()=>{try{const p='__sw_probe__';window.localStorage.setItem(p,'1');window.localStorage.removeItem(p);return window.localStorage;}catch(_){const mem=Object.create(null);return{getItem:k=>(k in mem?mem[k]:null),setItem:(k,v)=>{mem[k]=String(v);},removeItem:k=>{delete mem[k];}};}})();
+const cv=document.getElementById('c'),cx=cv?cv.getContext('2d'):null;
+let W=0,H=0,ns=[],noteInk='rgba(217,169,74,.4)',laneInk='rgba(240,214,150,.05)',noteLast=0;
+const NC=['♪','♫','♩','♬','𝄞'];
+function hexA(hex,a){const h=String(hex||'').replace('#','').trim();const n=h.length===3?h.split('').map(function(c){return c+c;}).join(''):h;if(n.length!==6||!/^[0-9a-f]{6}$/i.test(n))return 'rgba(217,169,74,'+a+')';const v=parseInt(n,16);return 'rgba('+((v>>16)&255)+','+((v>>8)&255)+','+(v&255)+','+a+')';}
+function refreshNoteColors(){
+  try{
+    const cs=getComputedStyle(document.documentElement);
+    const light=document.documentElement.getAttribute('data-theme')==='light';
+    noteInk=hexA((cs.getPropertyValue('--accent')||'#D9A94A').trim(), light?0.5:0.4);
+    laneInk=light?'rgba(60,45,20,.05)':'rgba(240,214,150,.05)';
+  }catch(_){}
+}
+function resize(){
+  if(!cv)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const r=cv.getBoundingClientRect();
+  W=Math.max(1,Math.round(r.width));H=Math.max(1,Math.round(r.height));
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  if(cx)cx.setTransform(dpr,0,0,dpr,0,0);
+}
+function init(){
+  ns=[];
+  if(!W)return;
+  const cols=Math.max(4,Math.round(W/30)),step=W/cols;
+  for(let i=0;i<cols;i++){
+    const x=Math.round((i+0.5)*step),count=(i%2===0)?2:1;
+    for(let k=0;k<count;k++)ns.push({x:x,y:Math.random()*H*1.5-H*0.5,spd:15+Math.random()*20,sz:13+Math.round(Math.random()*9),ch:NC[(i+k)%NC.length]});
+  }
+}
+function frame(ts){
+  const dt=Math.min(0.05,(((ts||0)-noteLast)/1000)||0);noteLast=ts||0;
+  if(!cx||W<8||H<8){requestAnimationFrame(frame);return;}
+  cx.clearRect(0,0,W,H);
+  cx.textAlign='center';cx.textBaseline='middle';
+  for(let i=0;i<ns.length;i++){
+    const n=ns[i];
+    n.y+=n.spd*dt;
+    const f=1-Math.abs((n.y/H)-0.5)/0.72;
+    const a=f<0?0:(f>1?1:f);
+    if(a>0.01){cx.globalAlpha=a;cx.font=n.sz+'px "Noto Sans SC",ui-serif,serif';cx.fillStyle=noteInk;cx.fillText(n.ch,n.x,n.y);cx.globalAlpha=1;}
+    if(n.y>H+40){n.y=-40;n.ch=NC[(Math.random()*NC.length)|0];n.spd=15+Math.random()*20;}
+  }
+  requestAnimationFrame(frame);
+}
+if(cx){refreshNoteColors();resize();init();frame();window.addEventListener('resize',function(){resize();init();});}
 
 function selInst(el){document.querySelectorAll('.inst-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
-function showPage(p){document.getElementById('homePage').style.display=p==='home'?'flex':'none';document.getElementById('resultPage').style.display=p==='result'?'block':'none';document.getElementById('authPage').style.display='none';}
+// 页面路由：保留原有 home / result 语义，新增 works / assistant / discover
+const SW_PAGES={home:'homePage',result:'resultPage',works:'worksPage',assistant:'assistantPage',discover:'discoverPage'};
+const SW_TITLES={home:'创作工作台',result:'作品工作台',works:'我的作品',assistant:'作品助手',discover:'发现'};
+function showPage(p){
+  const target=SW_PAGES[p]?p:'home';
+  Object.keys(SW_PAGES).forEach(function(k){
+    const el=document.getElementById(SW_PAGES[k]);
+    if(el)el.style.display=(k===target)?(k==='home'?'flex':'block'):'none';
+  });
+  const auth=document.getElementById('authPage');if(auth)auth.style.display='none';
+  document.documentElement.classList.toggle('notes-off',target!=='home');
+  const t=document.getElementById('topbarTitle');if(t)t.textContent=SW_TITLES[target];
+  document.querySelectorAll('.side-link').forEach(function(b){b.classList.toggle('is-current',b.getAttribute('data-page')===target);});
+  try{const app=document.querySelector('.app');if(app)app.classList.remove('nav-open');}catch(_){}
+  if(target==='works'&&typeof renderWorks==='function')renderWorks();
+  if(target==='assistant'&&typeof renderAssistant==='function')renderAssistant();
+  if(target==='discover'&&typeof renderDiscover==='function')renderDiscover();
+}
 
-const CHORDS={
-  'Am':{fingers:[[],[0,0,1,2,2,1]],desc:'根音 A\n小三和弦\n忧郁、深情',open:['x','o','o','o']},
-  'Dm':{fingers:[[],[2,3,2,0,'x','x']],desc:'根音 D\n小三和弦\n哀愁、内敛',open:['x','x','o','o']},
-  'G7':{fingers:[[],[1,0,0,0,2,1]],desc:'根音 G\n属七和弦\n制造张力',open:['o','o','o','o']},
-  'Cmaj7':{fingers:[[],[0,0,0,2,3,0]],desc:'根音 C\n大七和弦\n温暖、飘逸',open:['x','3','2','0']},
-  'C':{fingers:[[],[0,1,0,2,3,'x']],desc:'根音 C\n大三和弦\n明亮、开朗',open:['x','3','2','0']},
-  'G':{fingers:[[],[2,0,0,0,1,2]],desc:'根音 G\n大三和弦\n温暖、自然',open:['3','2','0','0']},
-  'Em':{fingers:[[],[0,0,0,0,2,2]],desc:'根音 E\n小三和弦\n深沉、内省',open:['0','0','0','2']},
-  'F':{fingers:[[],[1,1,2,3,3,1]],desc:'根音 F\n大三和弦\n封闭和弦',open:['1','1','2','3']}
+// ============================================================
+// 吉他指法：开放和弦 + 可计算横按指法
+// 数组顺序固定为：6弦(E) → 1弦(e)
+// -1 = 不弹，0 = 空弦，正数 = 实际品位
+// ============================================================
+const GUITAR_OPEN_SHAPES={
+  'C':[-1,3,2,0,1,0], 'Cm':[-1,3,5,5,4,3],
+  'C7':[-1,3,2,3,1,0], 'Cmaj7':[-1,3,2,0,0,0],
+  'D':[-1,-1,0,2,3,2], 'Dm':[-1,-1,0,2,3,1],
+  'D7':[-1,-1,0,2,1,2], 'Dm7':[-1,-1,0,2,1,1],
+  'E':[0,2,2,1,0,0], 'Em':[0,2,2,0,0,0],
+  'E7':[0,2,0,1,0,0], 'Em7':[0,2,0,0,0,0], 'Emaj7':[0,2,1,1,0,0],
+  'F':[1,3,3,2,1,1], 'Fm':[1,3,3,1,1,1],
+  'F7':[1,3,1,2,1,1], 'Fm7':[1,3,1,1,1,1], 'Fmaj7':[-1,-1,3,2,1,0],
+  'G':[3,2,0,0,0,3], 'G7':[3,2,0,0,0,1], 'Gmaj7':[3,-1,4,4,3,2],
+  'A':[-1,0,2,2,2,0], 'Am':[-1,0,2,2,1,0],
+  'A7':[-1,0,2,0,2,0], 'Am7':[-1,0,2,0,1,0], 'Amaj7':[-1,0,2,1,2,0],
+  'B':[-1,2,4,4,4,2], 'Bm':[-1,2,4,4,3,2],
+  'B7':[-1,2,1,2,0,2], 'Bm7':[-1,2,4,2,3,2], 'Bmaj7':[-1,2,4,3,4,2]
 };
-const PIANO_NOTES={'Am':[57,60,64],'Dm':[62,65,69],'G7':[55,59,62,65],'Cmaj7':[60,64,67,71],'C':[60,64,67],'G':[55,59,62],'Em':[52,55,59],'F':[53,57,60]};
+
+const GUITAR_ROOT_PC={'C':0,'C#':1,'DB':1,'D':2,'D#':3,'EB':3,'E':4,'F':5,'F#':6,'GB':6,'G':7,'G#':8,'AB':8,'A':9,'A#':10,'BB':10,'B':11};
+const GUITAR_PC_SHARP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function guitarNormalize(name){
+  return String(name||'').trim().replace(/♯/g,'#').replace(/♭/g,'b').replace(/△|Δ/g,'maj').replace(/\s+/g,'');
+}
+
+function splitChordSymbol(name){
+  const raw=guitarNormalize(name).split('/')[0];
+  const m=raw.match(/^([A-Ga-g])([#b]?)(.*)$/);
+  if(!m)return null;
+  const root=m[1].toUpperCase()+(m[2]||'');
+  return {root, suffix:m[3]||''};
+}
+
+function transposeChordForCapo(name, capo){
+  const info=splitChordSymbol(name);
+  if(!info || !capo)return guitarNormalize(name);
+  const pc=GUITAR_ROOT_PC[info.root.toUpperCase()];
+  if(pc===undefined)return guitarNormalize(name);
+  const newRoot=GUITAR_PC_SHARP[(pc-(Number(capo)||0)+120)%12];
+  return newRoot+info.suffix;
+}
+
+function guitarQualitySuffix(suffix){
+  const s=String(suffix||'').toLowerCase();
+  if(s.startsWith('maj7')||s.startsWith('ma7'))return 'maj7';
+  if(s.startsWith('m7b5')||s.includes('ø'))return 'm7';
+  if(s.startsWith('m7'))return 'm7';
+  if(s.startsWith('m')&&!s.startsWith('maj'))return 'm';
+  if(s.includes('7'))return '7';
+  return '';
+}
+
+function buildBarreShape(chordName){
+  const info=splitChordSymbol(chordName);
+  if(!info)return null;
+  const rootPc=GUITAR_ROOT_PC[info.root.toUpperCase()];
+  if(rootPc===undefined)return null;
+  const quality=guitarQualitySuffix(info.suffix);
+
+  // E 型（根音在 6 弦）和 A 型（根音在 5 弦），选更靠前/更易按的方案。
+  const eRoot=(rootPc-4+12)%12;
+  const aRoot=(rootPc-9+12)%12;
+  const eTemplates={
+    '':[0,2,2,1,0,0], 'm':[0,2,2,0,0,0],
+    '7':[0,2,0,1,0,0], 'm7':[0,2,0,0,0,0], 'maj7':[0,2,1,1,0,0]
+  };
+  const aTemplates={
+    '':[-1,0,2,2,2,0], 'm':[-1,0,2,2,1,0],
+    '7':[-1,0,2,0,2,0], 'm7':[-1,0,2,0,1,0], 'maj7':[-1,0,2,1,2,0]
+  };
+  const useE=(eRoot>0 && eRoot<=7) || !(aRoot>0 && aRoot<=7);
+  const rootFret=useE?eRoot:aRoot;
+  const tpl=(useE?eTemplates:aTemplates)[quality] || (useE?eTemplates:aTemplates)[''];
+  if(rootFret===0){
+    return {positions:tpl.slice(), shape:useE?'E 型开放指法':'A 型开放指法', baseFret:1};
+  }
+  const positions=tpl.map(v=>v<0?-1:v+rootFret);
+  const fretted=positions.filter(v=>v>0);
+  const minFret=Math.min(...fretted);
+  const baseFret=minFret<=1?1:minFret;
+  return {positions, shape:`${useE?'E':'A'} 型横按`, baseFret};
+}
+
+function getGuitarShape(chordName){
+  const normalized=guitarNormalize(chordName);
+  if(GUITAR_OPEN_SHAPES[normalized]){
+    const positions=GUITAR_OPEN_SHAPES[normalized].slice();
+    const fretted=positions.filter(v=>v>0);
+    const minFret=fretted.length?Math.min(...fretted):1;
+    return {positions, shape:'常用弹唱指法', baseFret:minFret>1?minFret:1};
+  }
+  return buildBarreShape(normalized);
+}
+
+// ============================================================
+// 钢琴和弦解析器：根据和弦名称自动计算构成音，不再硬编码 PIANO_NOTES。
+// ============================================================
+const NOTE_PC={
+  'C':0,'C#':1,'DB':1,'D':2,'D#':3,'EB':3,'E':4,
+  'F':5,'F#':6,'GB':6,'G':7,'G#':8,'AB':8,
+  'A':9,'A#':10,'BB':10,'B':11
+};
+const PC_NAME=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function normalizeChordSymbol(name){
+  return String(name||'').trim()
+    .replace(/♯/g,'#').replace(/♭/g,'b')
+    .replace(/△/g,'maj').replace(/Δ/g,'maj')
+    .replace(/−/g,'m').replace(/\s+/g,'');
+}
+
+function parseChordToPitchClasses(name){
+  const raw=normalizeChordSymbol(name);
+  if(!raw)return [];
+  const parts=raw.split('/');
+  const main=parts[0], bass=parts[1]||'';
+  const m=main.match(/^([A-Ga-g])([#b]?)(.*)$/);
+  if(!m)return [];
+
+  const root=NOTE_PC[(m[1].toUpperCase()+(m[2]||'')).toUpperCase()];
+  if(root===undefined)return [];
+  const suffix=(m[3]||'').toLowerCase();
+  let intervals;
+
+  if(suffix.startsWith('m7b5')||suffix.includes('ø')) intervals=[0,3,6,10];
+  else if(suffix.startsWith('dim7')||suffix.includes('°7')) intervals=[0,3,6,9];
+  else if(suffix.startsWith('dim')||suffix.includes('°')) intervals=[0,3,6];
+  else if(suffix.startsWith('aug')||suffix.startsWith('+')) intervals=[0,4,8];
+  else if(suffix.startsWith('sus2')) intervals=[0,2,7];
+  else if(suffix.startsWith('sus4')||suffix==='sus') intervals=[0,5,7];
+  else if(/^5(?:$|[^0-9])/.test(suffix)) intervals=[0,7];
+  else if(suffix.startsWith('m')&&!suffix.startsWith('maj')) intervals=[0,3,7];
+  else intervals=[0,4,7];
+
+  if(suffix.includes('maj7')||suffix.includes('ma7')) intervals.push(11);
+  else if(suffix.includes('7')&&!suffix.startsWith('dim7')&&!suffix.startsWith('m7b5')) intervals.push(10);
+  if(suffix.includes('6')&&!suffix.includes('16')) intervals.push(9);
+
+  const hasAdd9=suffix.includes('add9')||suffix.includes('add2');
+  const has9=/(^|[^a-z])9/.test(suffix)||suffix.endsWith('9');
+  const has11=suffix.includes('11');
+  const has13=suffix.includes('13');
+  if((has9||has11||has13)&&!hasAdd9&&!suffix.includes('maj7')&&!intervals.includes(10)) intervals.push(10);
+  if(hasAdd9||has9||has11||has13) intervals.push(14);
+  if(has11||has13) intervals.push(17);
+  if(has13) intervals.push(21);
+
+  if(suffix.includes('b5')){intervals=intervals.filter(x=>x%12!==7);intervals.push(6);}
+  if(suffix.includes('#5')){intervals=intervals.filter(x=>x%12!==7);intervals.push(8);}
+  if(suffix.includes('b9'))intervals.push(13);
+  if(suffix.includes('#9'))intervals.push(15);
+  if(suffix.includes('#11'))intervals.push(18);
+  if(suffix.includes('b13'))intervals.push(20);
+
+  const pcs=[...new Set(intervals.map(i=>(root+i)%12))];
+  if(bass){
+    const bm=bass.match(/^([A-Ga-g])([#b]?)/);
+    if(bm){
+      const bpc=NOTE_PC[(bm[1].toUpperCase()+(bm[2]||'')).toUpperCase()];
+      if(bpc!==undefined&&!pcs.includes(bpc))pcs.unshift(bpc);
+    }
+  }
+  return pcs;
+}
+
+function chordToneNames(name){
+  return parseChordToPitchClasses(name).map(pc=>PC_NAME[pc]);
+}
+
+// ============================================================
+// 当前音乐参数 - 全局状态，方便对话框更新
+// ============================================================
+let currentParams = null;
+let pendingParams = null;  // 🟢 新增：待应用的参数（用户点击"更新"前的临时参数）
 
 function drawPianoSvg(name){
-  const svg=document.getElementById('pianoSvg');svg.innerHTML='';
-  const notes=PIANO_NOTES[name]||[];
+  const svg=document.getElementById('pianoSvg');
+  if(!svg)return;
+  svg.innerHTML='';
+  const cs=getComputedStyle(document.documentElement);
+  const tok=(k,d)=>(cs.getPropertyValue(k)||d).trim();
+  const ACCENT=tok('--accent','#D9A94A');
+  const PW=tok('--piano-white','#1E1913');
+  const PB=tok('--piano-black','#14110D');
+  const ST=tok('--piano-stroke','rgba(240,214,150,.14)');
+  const PL=tok('--piano-label','rgba(240,214,150,.30)');
+  const PLA=tok('--piano-label-active','#1C1405');
+  const pcs=parseChordToPitchClasses(name);
   const ww=18,wh=56,bw=11,bh=34;
   const wo=[0,2,4,5,7,9,11],wn=['C','D','E','F','G','A','B'];
   const bo=[1,3,6,8,10],bx=[0.65,1.65,3.65,4.65,5.65];
   const mk=(tag,attrs)=>{const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;};
-  wo.forEach((offset,i)=>{
-    const note=60+offset,active=notes.includes(note);
-    svg.appendChild(mk('rect',{x:i*ww+1,y:14,width:ww-2,height:wh,rx:2,fill:active?'#c8a97e':'#2a2218',stroke:'#c8a97e33','stroke-width':1}));
-    const t=mk('text',{x:i*ww+ww/2,y:14+wh-5,'text-anchor':'middle','font-size':7,fill:active?'#1a1208':'#ffffff22'});
+
+  wo.forEach((pc,i)=>{
+    const active=pcs.includes(pc);
+    svg.appendChild(mk('rect',{x:i*ww+1,y:14,width:ww-2,height:wh,rx:3,fill:active?ACCENT:PW,stroke:ST,'stroke-width':1}));
+    const t=mk('text',{x:i*ww+ww/2,y:14+wh-5,'text-anchor':'middle','font-size':7,fill:active?PLA:PL});
     t.textContent=wn[i];svg.appendChild(t);
   });
-  bo.forEach((offset,i)=>{
-    const note=60+offset,active=notes.includes(note);
-    svg.appendChild(mk('rect',{x:bx[i]*ww+1-bw/2,y:14,width:bw,height:bh,rx:2,fill:active?'#c8a97e':'#1a1208',stroke:'#c8a97e22','stroke-width':1}));
+  bo.forEach((pc,i)=>{
+    const active=pcs.includes(pc);
+    svg.appendChild(mk('rect',{x:bx[i]*ww+1-bw/2,y:14,width:bw,height:bh,rx:2,fill:active?ACCENT:PB,stroke:ST,'stroke-width':1}));
   });
-  const t=mk('text',{x:0,y:10,'font-size':8,fill:'#ffffff22'});t.textContent='C4 八度';svg.appendChild(t);
+  const t=mk('text',{x:0,y:10,'font-size':8,fill:PL});
+  t.textContent=pcs.length?`C4 八度 · ${chordToneNames(name).join(' · ')}`:'无法识别该和弦';
+  svg.appendChild(t);
 }
-
 function showChordDiagram(name,el){
   document.querySelectorAll('.chord-tag').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  const chord=CHORDS[name];
-  document.getElementById('chordDiag').classList.add('show');
+  if(el)el.classList.add('active');
+
+  const diag=document.getElementById('chordDiag');
+  if(!diag)return;
+  diag.classList.add('show');
   document.getElementById('diagName').textContent=name;
-  document.getElementById('diagDesc').innerHTML=(chord?.desc||'').replace(/\n/g,'<br>');
-  const isPiano=document.querySelector('.inst-btn.active').textContent==='钢琴';
+
+  const toneNames=chordToneNames(name);
+  const inst=String(currentParams?.instrument || document.querySelector('.inst-btn.active')?.textContent || '钢琴');
+  const isPiano=inst.includes('钢琴');
+  const capo=(!isPiano && Number(currentParams?.capo)>0)?Number(currentParams.capo):0;
+
   document.getElementById('guitarDiag').style.display=isPiano?'none':'block';
   document.getElementById('pianoDiag').style.display=isPiano?'block':'none';
-  if(isPiano){setTimeout(()=>drawPianoSvg(name),30);return;}
-  const grid=document.getElementById('diagGrid');grid.innerHTML='';
-  for(let f=1;f<=5;f++){for(let s=0;s<4;s++){const cell=document.createElement('div');cell.className='fret-cell';if(chord&&Array.isArray(chord.fingers[1])){const v=chord.fingers[1][s];if(typeof v==='number'&&v===f){const dot=document.createElement('div');dot.className='dot';cell.appendChild(dot);}}grid.appendChild(cell);}}
-  const fl=document.getElementById('diagFrets');fl.innerHTML='';
-  for(let f=1;f<=5;f++){const l=document.createElement('div');l.className='fret-label';l.textContent=f;fl.appendChild(l);}
+
+  if(isPiano){
+    document.getElementById('diagDesc').innerHTML=toneNames.length
+      ? `构成音：${toneNames.join(' · ')}<br>高亮琴键即为该和弦的主要构成音。`
+      : '暂未识别该和弦';
+    setTimeout(()=>drawPianoSvg(name),30);
+    return;
+  }
+
+  // Capo 只改变吉他按法，不改变真实和弦/MIDI 音高。
+  const shapeChord=capo?transposeChordForCapo(name,capo):guitarNormalize(name);
+  const shape=getGuitarShape(shapeChord);
+  const descParts=[];
+  if(capo)descParts.push(`实际和弦：${name}<br>Capo ${capo} 品 → 按 <b>${shapeChord}</b> 指法`);
+  else descParts.push(`吉他指法：<b>${shapeChord}</b>`);
+  if(toneNames.length)descParts.push(`构成音：${toneNames.join(' · ')}`);
+  if(shape)descParts.push(shape.shape);
+  else descParts.push('暂时无法生成可靠指法');
+  document.getElementById('diagDesc').innerHTML=descParts.join('<br>');
+
+  const grid=document.getElementById('diagGrid');
+  const fl=document.getElementById('diagFrets');
   const om=document.getElementById('diagOM');
-  om.innerHTML=(chord?.open||['o','o','o','o']).slice(0,4).map(v=>`<div class="om-mark ${v==='x'?'':'open'}">${v==='o'?'○':v==='x'?'×':v}</div>`).join('');
+  grid.innerHTML='';fl.innerHTML='';om.innerHTML='';
+
+  if(!shape){
+    for(let f=0;f<5;f++)for(let s=0;s<6;s++){const cell=document.createElement('div');cell.className='fret-cell';grid.appendChild(cell);}
+    return;
+  }
+
+  const positions=shape.positions;
+  let baseFret=shape.baseFret||1;
+  // 让所有按弦点尽量落在连续 5 品窗口内。
+  const fretted=positions.filter(v=>v>0);
+  if(fretted.length){
+    const minFret=Math.min(...fretted), maxFret=Math.max(...fretted);
+    baseFret=minFret<=1?1:minFret;
+    if(maxFret-baseFret>4)baseFret=Math.max(1,maxFret-4);
+  }
+
+  // 顶部 6 根弦的空弦/闷弦标记。
+  positions.forEach(v=>{
+    const mark=document.createElement('div');
+    mark.className='om-mark '+(v===0?'open':'');
+    mark.textContent=v<0?'×':v===0?'○':'';
+    om.appendChild(mark);
+  });
+
+  for(let row=0;row<5;row++){
+    const fret=baseFret+row;
+    const label=document.createElement('div');
+    label.className='fret-label';
+    label.textContent=fret;
+    fl.appendChild(label);
+    for(let stringIndex=0;stringIndex<6;stringIndex++){
+      const cell=document.createElement('div');
+      cell.className='fret-cell';
+      if(positions[stringIndex]===fret){
+        const dot=document.createElement('div');dot.className='dot';cell.appendChild(dot);
+      }
+      grid.appendChild(cell);
+    }
+  }
 }
 
-let playing=false,pTimer=null;
-function togglePlay(){playing=!playing;const v=document.getElementById('vinyl'),pi=document.getElementById('playIcon');if(playing){v.classList.add('spin');pi.outerHTML='<div class="bars" id="playIcon"><div class="bar"></div><div class="bar"></div></div>';document.getElementById('pInfo').textContent='正在播放...';let p=0;pTimer=setInterval(()=>{p+=0.4;document.getElementById('prog').style.width=p+'%';if(p>=100){clearInterval(pTimer);stopPlay();}},120);}else stopPlay();}
-function stopPlay(){playing=false;clearInterval(pTimer);document.getElementById('vinyl').classList.remove('spin');const pi=document.getElementById('playIcon');if(pi)pi.outerHTML='<div class="tri" id="playIcon"></div>';document.getElementById('pInfo').textContent='点击播放 MIDI 伴奏';document.getElementById('prog').style.width='0%';}
+// ============================================================
+// 🎵 MIDI 浏览器播放器：MIDI 负责音符，Tone.js 负责真正发声
+// ============================================================
 
-function addMsg(text,isUser){
-  const msgs=document.getElementById('chatMessages');
-  const div=document.createElement('div');
-  div.className=`msg msg-${isUser?'user':'ai'}`;
-  const now=new Date();
-  const time=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-  div.innerHTML=`<div class="msg-bubble">${text}</div><div class="msg-time">${time}</div>`;
-  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
-}
-function showTyping(){
-  const msgs=document.getElementById('chatMessages');
-  const div=document.createElement('div');
-  div.className='msg msg-ai';div.id='typingMsg';
-  div.innerHTML='<div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
-  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
-}
-async function sendChat(){
-  const input=document.getElementById('chatInput');
-  const text=input.value.trim();
-  if(!text) return;
-  addMsg(text,true);
-  input.value='';
-  showTyping();
+let midiFilePath = null;
+let loadedMidiPath = null;
+let midiDuration = 0;
+let midiSynths = [];
+let progressTimer = null;
+let isPlaying = false;
+
+async function togglePlay() {
+  if (!midiFilePath) {
+    alert("❌ 还没有生成音乐，请先生成");
+    return;
+  }
+
   try {
-    const url = currentUser ? '/music/chat' : '/music/chat/guest';
-    const headers = {'Content-Type':'application/x-www-form-urlencoded'};
-    if(currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
-    const res = await fetch(url, {
-      method:'POST', headers,
-      body:`message=${encodeURIComponent(text)}`
+    await Tone.start(); // 必须由用户点击触发，解除浏览器音频限制
+
+    if (!isPlaying) {
+      if (loadedMidiPath !== midiFilePath) {
+        await loadMidiForPlayback(midiFilePath);
+      }
+      Tone.Transport.start();
+      isPlaying = true;
+      startProgressTimer();
+      document.getElementById('vinyl').classList.add('spin');
+      document.getElementById('playIcon').outerHTML = '<div class="bars" id="playIcon"><div class="bar"></div><div class="bar"></div></div>';
+      document.getElementById('pInfo').textContent = '正在播放 MIDI 伴奏...';
+    } else {
+      pausePlay();
+    }
+  } catch (e) {
+    console.error("❌ MIDI 播放失败:", e);
+    alert("MIDI 播放失败：" + e.message);
+  }
+}
+
+async function loadMidiForPlayback(filePath) {
+  stopPlay();
+
+  const res = await fetch(filePath);
+  if (!res.ok) {
+    throw new Error(`MIDI 文件请求失败：HTTP ${res.status}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('midi') && !contentType.includes('octet-stream')) {
+    console.warn('⚠️ 返回的 Content-Type 不是 MIDI:', contentType);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  if (arrayBuffer.byteLength < 14) {
+    throw new Error('返回的 MIDI 文件为空或损坏');
+  }
+
+  const midi = new Midi(arrayBuffer);
+  midiDuration = midi.duration || 0;
+
+  Tone.Transport.stop();
+  Tone.Transport.cancel(0);
+  Tone.Transport.seconds = 0;
+
+  midiSynths.forEach(s => s.dispose());
+  midiSynths = [];
+
+  // 根据当前主乐器使用不同的浏览器合成音色。
+  // 注意：这仍然是 Tone.js 合成器，不是真实吉他/钢琴采样；
+  // 但切换钢琴/木吉他/电吉他后，浏览器实际听到的音色会跟着变化。
+  const currentInstrument = currentParams?.instrument || '钢琴';
+
+  midi.tracks.forEach(track => {
+    if (!track.notes || track.notes.length === 0) return;
+
+    const synth = createBrowserSynth(currentInstrument);
+    midiSynths.push(synth);
+
+    track.notes.forEach(note => {
+      Tone.Transport.schedule(time => {
+        synth.triggerAttackRelease(note.name, Math.max(note.duration, 0.05), time, Math.max(note.velocity, 0.15));
+      }, note.time);
     });
-    const data = await res.json();
+  });
+
+  if (midiSynths.length === 0) {
+    throw new Error('MIDI 中没有可播放的音符');
+  }
+
+  // 到结尾自动停止并复位
+  Tone.Transport.scheduleOnce(() => {
+    setTimeout(() => stopPlay(), 0);
+  }, midiDuration + 0.05);
+
+  loadedMidiPath = filePath;
+  document.getElementById('pInfo').textContent = `MIDI 已加载 · ${midi.tracks.length} 轨`;
+  console.log('✅ MIDI 加载完成:', { duration: midiDuration, tracks: midi.tracks.length });
+}
+
+function createBrowserSynth(instrument) {
+  const name = instrument || '钢琴';
+
+  if (name.includes('木吉他') || name === '吉他') {
+    const synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.002, decay: 0.22, sustain: 0.08, release: 0.28 }
+    }).toDestination();
+    synth.volume.value = -8;
+    return synth;
+  }
+
+  if (name.includes('电吉他')) {
+    const synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.008, decay: 0.16, sustain: 0.22, release: 0.32 }
+    }).toDestination();
+    synth.volume.value = -13;
+    return synth;
+  }
+
+  if (name.includes('尼龙吉他')) {
+    const synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 0.2, sustain: 0.1, release: 0.3 }
+    }).toDestination();
+    synth.volume.value = -7;
+    return synth;
+  }
+
+  // 默认钢琴感：仍为合成音色，后续再换 SoundFont/Sampler
+  const synth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.006, decay: 0.35, sustain: 0.18, release: 0.65 }
+  }).toDestination();
+  synth.volume.value = -10;
+  return synth;
+}
+
+function startProgressTimer() {
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    if (!isPlaying || !midiDuration) return;
+    const progress = Math.min(100, (Tone.Transport.seconds / midiDuration) * 100);
+    document.getElementById('prog').style.width = progress + '%';
+  }, 100);
+}
+
+function pausePlay() {
+  if (!isPlaying) return;
+  Tone.Transport.pause();
+  isPlaying = false;
+  clearInterval(progressTimer);
+  document.getElementById('vinyl').classList.remove('spin');
+  const pi = document.getElementById('playIcon');
+  if (pi) pi.outerHTML = '<div class="tri" id="playIcon"></div>';
+  document.getElementById('pInfo').textContent = '已暂停';
+}
+
+function stopPlay() {
+  try {
+    Tone.Transport.stop();
+    Tone.Transport.seconds = 0;
+  } catch (_) {}
+  isPlaying = false;
+  clearInterval(progressTimer);
+  const vinyl = document.getElementById('vinyl');
+  if (vinyl) vinyl.classList.remove('spin');
+  const pi = document.getElementById('playIcon');
+  if (pi) pi.outerHTML = '<div class="tri" id="playIcon"></div>';
+  const prog = document.getElementById('prog');
+  if (prog) prog.style.width = '0%';
+}
+
+// ============================================================
+// 弹唱谱：把歌词中的 [Chord] 标记渲染成和弦在上、歌词在下
+// ============================================================
+function translateSectionTitle(raw){
+  const key=String(raw||'').trim().toLowerCase();
+  const map={
+    'verse 1':'主歌 1','verse1':'主歌 1',
+    'verse 2':'主歌 2','verse2':'主歌 2',
+    'verse 3':'主歌 3','verse3':'主歌 3',
+    'pre-chorus':'预副歌','pre chorus':'预副歌','prechorus':'预副歌',
+    'chorus':'副歌','bridge':'桥段','final chorus':'最终副歌',
+    'intro':'前奏','outro':'尾奏'
+  };
+  return map[key] || raw;
+}
+
+function isSectionTag(line){
+  return /^\[(verse\s*\d*|pre[- ]?chorus|chorus|bridge|final\s+chorus|intro|outro)\]$/i.test(String(line||'').trim());
+}
+
+function parseLyricSegments(line){
+  const segments=[];
+  const re=/\[([^\]]+)\]/g;
+  const matches=[...String(line||'').matchAll(re)];
+
+  if(matches.length===0){
+    return [{chord:'', lyric:String(line||'')}];
+  }
+
+  // 和弦前若存在文字，也保留下来，避免模型偶尔没有把和弦放在行首时丢字
+  if(matches[0].index>0){
+    const leading=String(line||'').slice(0,matches[0].index);
+    if(leading) segments.push({chord:'', lyric:leading});
+  }
+
+  matches.forEach((m,idx)=>{
+    const chord=m[1].trim();
+    const lyricStart=m.index+m[0].length;
+    const lyricEnd=idx+1<matches.length ? matches[idx+1].index : String(line||'').length;
+    const lyric=String(line||'').slice(lyricStart,lyricEnd);
+    segments.push({chord,lyric});
+  });
+
+  return segments;
+}
+
+function focusChordFromScore(chordName){
+  const tags=[...document.querySelectorAll('#rChords .chord-tag')];
+  const found=tags.find(el=>el.textContent.trim()===chordName);
+  if(found){
+    found.click();
+    found.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+  }
+}
+
+function renderLeadSheet(lyrics){
+  const root=document.getElementById('rLyrics');
+  if(!root) return;
+  root.innerHTML='';
+  root.classList.add('lead-sheet');
+
+  const source=String(lyrics||'').replace(/\r\n?/g,'\n').trim();
+  if(!source){
+    const empty=document.createElement('div');
+    empty.className='score-empty';
+    empty.textContent='暂无歌词';
+    root.appendChild(empty);
+    return;
+  }
+
+  let section=document.createElement('div');
+  section.className='score-section';
+  root.appendChild(section);
+
+  source.split('\n').forEach(rawLine=>{
+    const line=rawLine.trimEnd();
+    const trimmed=line.trim();
+
+    if(!trimmed){
+      return;
+    }
+
+    if(isSectionTag(trimmed)){
+      section=document.createElement('div');
+      section.className='score-section';
+      root.appendChild(section);
+
+      const title=document.createElement('div');
+      title.className='score-section-title';
+      title.textContent=translateSectionTitle(trimmed.slice(1,-1));
+      section.appendChild(title);
+      return;
+    }
+
+    const segments=parseLyricSegments(line);
+
+    // 没有和弦标记时仍然显示，防止模型偶发漏标导致整句消失
+    if(segments.length===1 && !segments[0].chord){
+      const plain=document.createElement('div');
+      plain.className='score-plain-line';
+      plain.textContent=segments[0].lyric;
+      section.appendChild(plain);
+      return;
+    }
+
+    const row=document.createElement('div');
+    row.className='score-line';
+
+    segments.forEach(seg=>{
+      const wrap=document.createElement('span');
+      wrap.className='score-segment';
+
+      const chord=document.createElement('button');
+      chord.type='button';
+      chord.className='score-chord';
+      chord.textContent=seg.chord || ' ';
+      if(seg.chord){
+        chord.title=`查看 ${seg.chord} 和弦`;
+        chord.addEventListener('click',()=>focusChordFromScore(seg.chord));
+      }else{
+        chord.style.visibility='hidden';
+      }
+
+      const lyric=document.createElement('span');
+      lyric.className='score-lyric';
+      // 用不间断空格保留词组尾部空格，让下一枚和弦与歌词位置更自然
+      lyric.textContent=(seg.lyric || ' ').replace(/ /g,'\u00A0');
+
+      wrap.appendChild(chord);
+      wrap.appendChild(lyric);
+      row.appendChild(wrap);
+    });
+
+    section.appendChild(row);
+  });
+}
+
+// ============================================================
+// 关键修复：更新UI显示的函数
+// ============================================================
+function updateUIDisplay(params){
+  if(!params) return;
+  currentParams = params;
+  
+  // 更新标题
+  document.getElementById('rTitle').textContent=`${params.mood}的${params.genre}风`;
+  
+  // 更新乐器按钮 + 元数据。AI 对话把钢琴改成吉他时，这里必须同步。
+  const inst = params.instrument || document.querySelector('.inst-btn.active')?.textContent || '钢琴';
+  document.querySelectorAll('.inst-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === inst);
+  });
+
+  document.getElementById('rMeta').innerHTML=[
+    `调式 <span>${params.key}</span>`,
+    `BPM <span>${params.bpm}</span>`,
+    `乐器 <span>${inst}</span>`,
+    ...(inst.includes('吉他') && Number(params.capo) > 0 ? [`Capo <span>${params.capo} 品</span>`] : [])
+  ].map(t=>`<div class="meta-chip">${t}</div>`).join('');
+  
+  // 更新和弦：用 DOM 安全创建，避免模型输出特殊字符破坏 HTML。
+  const chordsList = String(params.chords || '').split(/\s*(?:-|–|—|,|，|\|)\s*/).map(c => c.trim()).filter(c => c);
+  const chordRoot=document.getElementById('rChords');
+  chordRoot.innerHTML='';
+  chordsList.forEach(c=>{
+    const tag=document.createElement('button');
+    tag.type='button';
+    tag.className='chord-tag';
+    tag.title=c;
+    tag.textContent=c;
+    tag.addEventListener('click',()=>showChordDiagram(c,tag));
+    chordRoot.appendChild(tag);
+  });
+  const chordHint=document.getElementById('chordHintTag');
+  if(chordHint){
+    chordHint.textContent=inst.includes('钢琴')?'点击查看按键':(Number(params.capo)>0?`Capo ${params.capo} · 点击查看指法`:'点击查看指法');
+  }
+  
+  // 更新弹唱谱：把 [C]歌词 [G]歌词 解析成“和弦在上、歌词在下”
+  renderLeadSheet(params.lyrics);
+  
+  // 更新播放器信息
+  document.getElementById('pName').textContent=`${params.mood}${params.genre} · ${inst}`;
+  
+  // 点击第一个和弦显示图表
+  const firstChordEl = document.querySelector('#rChords .chord-tag');
+  if(firstChordEl) {
+    firstChordEl.click();
+  }
+  
+  showUpdateHint('✓ 已更新音乐信息');
+}
+
+// ============================================================
+// 显示更新提示
+// ============================================================
+function showUpdateHint(msg){
+  const hint = document.getElementById('updateHint');
+  hint.textContent = msg;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 2000);
+}
+
+
+function addMsg(text, isUser) {
+  const container = document.getElementById('chatMessages');
+
+  if (!container) {
+    console.error('❌ 找不到 chatMessages 容器');
+    return;
+  }
+
+  const msg = document.createElement('div');
+  msg.className = isUser ? 'msg msg-user' : 'msg msg-ai';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = text;
+
+  const time = document.createElement('div');
+  time.className = 'msg-time';
+  time.textContent = '刚刚';
+
+  msg.appendChild(bubble);
+  msg.appendChild(time);
+
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+
+  if (!container) {
+    console.error('❌ 找不到 chatMessages 容器');
+    return;
+  }
+
+  document.getElementById('typingMsg')?.remove();
+
+  const msg = document.createElement('div');
+  msg.className = 'msg msg-ai';
+  msg.id = 'typingMsg';
+
+  msg.innerHTML = `
+    <div class="msg-bubble">
+      <div class="typing">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+    <div class="msg-time">正在思考...</div>
+  `;
+
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  console.log('💬 准备发送消息:', text);
+
+  addMsg(text, true);
+  input.value = '';
+  showTyping();
+
+  try {
+    const url = currentUser
+      ? '/music/chat'
+      : '/music/chat/guest';
+
+    console.log('🌐 请求地址:', url);
+    console.log('🎵 当前歌曲参数:', currentParams);
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (currentUser?.token) {
+      headers['Authorization'] = 'Bearer ' + currentUser.token;
+    }
+
+    let res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message: text,
+        currentParams: currentParams
+      })
+    });
+
+    // 登录 token 失效时自动切换游客接口重试一次
+    if (currentUser && (res.status === 401 || res.status === 403)) {
+      console.warn(`⚠️ 聊天登录状态失效（HTTP ${res.status}），自动切换游客模式`);
+
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('username');
+      currentUser = null;
+      updateUsageBar();
+
+      res = await fetch('/music/chat/guest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: text,
+          currentParams: currentParams
+        })
+      });
+    }
+
+    console.log('📡 HTTP 状态:', res.status);
+
+    const rawText = await res.text();
+    console.log('📦 后端原始返回:', rawText);
+
     document.getElementById('typingMsg')?.remove();
-    addMsg(data.success ? data.response : '抱歉，出了点问题，请重试', false);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${rawText}`);
+    }
+
+    let data;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      throw new Error('后端返回的不是合法 JSON：' + rawText);
+    }
+
+    if (data.success) {
+      addMsg(
+        data.response || '已处理你的请求',
+        false
+      );
+
+      if (data.params) {
+        console.log('✅ 收到修改后的歌曲参数:', data.params);
+
+        pendingParams = data.params;
+
+        const updatePrompt = document.getElementById('updatePrompt');
+        if (updatePrompt) {
+          updatePrompt.style.display = 'block';
+        }
+      }
+
+    } else {
+      console.error('❌ 后端返回失败:', data);
+
+      addMsg(
+        data.error || '抱歉，处理失败，请重试',
+        false
+      );
+    }
+
+  } catch (e) {
+    document.getElementById('typingMsg')?.remove();
+
+    console.error('❌ 聊天请求失败:', e);
+
+    addMsg(
+      '发送失败：' + e.message,
+      false
+    );
+  }
+}
+
+// 用户点击“点击更新”后：不仅更新文字，还让后端重新生成 MIDI
+async function applyUpdates(){
+  if(!pendingParams) return;
+
+  const nextParams = pendingParams;
+  const updatePrompt = document.getElementById('updatePrompt');
+
+  try {
+    showUpdateHint('正在重新生成伴奏...');
+    stopPlay();
+
+    const url = currentUser ? '/music/regenerate' : '/music/regenerate/guest';
+    const headers = { 'Content-Type': 'application/json' };
+    if(currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
+
+    let res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(nextParams)
+    });
+
+    // 登录失效时自动退回游客重生成
+    if(currentUser && (res.status === 401 || res.status === 403)) {
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('username');
+      currentUser = null;
+      updateUsageBar();
+
+      res = await fetch('/music/regenerate/guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextParams)
+      });
+    }
+
+    const raw = await res.text();
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${raw}`);
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      throw new Error('重新生成接口返回的不是合法 JSON：' + raw);
+    }
+
+    if(!data.success) throw new Error(data.error || '重新生成失败');
+
+    // 使用后端校验后的参数
+    const appliedParams = data.params || nextParams;
+    updateUIDisplay(appliedParams);
+
+    // 切换到新的 MIDI；下次点击播放会重新加载
+    midiFilePath = data.downloadUrl;
+    loadedMidiPath = null;
+
+    pendingParams = null;
+    if(updatePrompt) updatePrompt.style.display = 'none';
+
+    document.getElementById('pInfo').textContent = '新伴奏已生成 · 点击播放';
+    showUpdateHint('✓ 已更新并重新生成伴奏');
+    console.log('✅ 修改后的新 MIDI:', midiFilePath);
+
   } catch(e) {
-    document.getElementById('typingMsg')?.remove();
-    addMsg('网络错误，请重试', false);
+    console.error('❌ 应用修改失败:', e);
+    showUpdateHint('更新失败');
+    alert('应用修改失败：' + e.message);
   }
 }
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
@@ -447,70 +2064,88 @@ async function generate(){
   document.getElementById('mainContent').style.display='none';
 
   try {
-    // 判断游客还是登录用户
     const url = currentUser ? '/music/create' : '/music/create/guest';
-    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-    if (currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: `description=${encodeURIComponent(desc)}`
+    const headers = {'Content-Type':'application/x-www-form-urlencoded'};
+    if(currentUser?.token) headers['Authorization'] = 'Bearer ' + currentUser.token;
+    
+    let res = await fetch(url, {
+      method:'POST', headers,
+      body:`description=${encodeURIComponent(desc)}&instrument=${encodeURIComponent(inst)}`
     });
-    const d = await res.json();
 
-    if (!d.success) {
-      if (d.limitReached) {
-        alert('今日游客次数已用完，请登录后继续使用');
-        showPage('home');
-        showAuth('login');
-        return;
-      }
-      throw new Error(d.error || '生成失败');
-    }
-
-    // 更新剩余次数
-    if (d.remaining !== undefined) {
-      if (currentUser) currentUser.remaining = d.remaining;
+    // 登录 token 失效时，不再一直卡在 /music/create 的 403
+    if (currentUser && (res.status === 401 || res.status === 403)) {
+      console.warn(`⚠️ 登录状态失效（HTTP ${res.status}），清理本地 Token 并切换游客模式`);
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('username');
+      currentUser = null;
       updateUsageBar();
+
+      // 自动用游客接口重试一次本次生成
+      res = await fetch('/music/create/guest', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:`description=${encodeURIComponent(desc)}&instrument=${encodeURIComponent(inst)}`
+      });
     }
 
+    if(!res.ok){
+      let serverMessage='';
+      try{
+        const errBody=await res.json();
+        serverMessage=errBody?.error||errBody?.message||'';
+      }catch(_){}
+      throw new Error(serverMessage || `服务器请求失败：HTTP ${res.status}`);
+    }
+
+    let d;
+    try {
+      d = await res.json();
+    } catch(_) {
+      throw new Error('后端返回的不是合法 JSON，请检查 Spring Boot 控制台和接口地址');
+    }
+    
+    if(!d.success) throw new Error(d.error || '服务返回异常');
+    
     const params = d.params;
     document.getElementById('loadingFull').style.display='none';
     document.getElementById('mainContent').style.display='block';
-    document.getElementById('rTitle').textContent=`${params.mood}的${params.genre}风`;
-    document.getElementById('rMeta').innerHTML=[
-      `调式 <span>${params.key}</span>`,
-      `BPM <span>${params.bpm}</span>`,
-      `乐器 <span>${inst}</span>`
-    ].map(t=>`<div class="meta-chip">${t}</div>`).join('');
-    document.getElementById('rChords').innerHTML=params.chords.split(' - ').map(c=>`<div class="chord-tag" onclick="showChordDiagram('${c}',this)">${c}</div>`).join('');
-    document.getElementById('rLyrics').textContent=params.lyrics;
-    document.getElementById('pName').textContent=`${params.mood}${params.genre} · ${inst}`;
-    document.querySelector('.chord-tag').click();
+    
+    // 保存后端生成的 MIDI URL
+    midiFilePath = d.downloadUrl;
+    loadedMidiPath = null;
+    console.log("✅ MIDI 文件路径:", midiFilePath);
+    
+    // 使用统一的更新函数
+    updateUIDisplay(params);
+
+    // 收进本地作品库（纯前端附加，不改动后端数据）
+    try { addWork(params, desc); } catch(_) {}
 
   } catch(e) {
-    alert('生成失败：' + e.message);
+    console.error('❌ 生成失败:', e);
+    alert('生成失败：' + (e?.message || '未知错误'));
+    document.getElementById('loadingFull').style.display='none';
     showPage('home');
   }
 }
 
 // ========== 用户状态 ==========
-let currentUser = null; // null=游客
+let currentUser = null;
 let authMode = 'login';
 
 function getGuestCount() {
   const today = new Date().toDateString();
-  const data = JSON.parse(localStorage.getItem('guestUsage') || '{}');
+  const data = JSON.parse(safeStorage.getItem('guestUsage') || '{}');
   if (data.date !== today) return 8;
   return Math.max(0, 8 - (data.count || 0));
 }
 
 function useGuestCount() {
   const today = new Date().toDateString();
-  const data = JSON.parse(localStorage.getItem('guestUsage') || '{}');
+  const data = JSON.parse(safeStorage.getItem('guestUsage') || '{}');
   const count = data.date === today ? (data.count || 0) + 1 : 1;
-  localStorage.setItem('guestUsage', JSON.stringify({ date: today, count }));
+  safeStorage.setItem('guestUsage', JSON.stringify({ date: today, count }));
 }
 
 function updateUsageBar() {
@@ -526,14 +2161,20 @@ function updateUsageBar() {
       countEl.textContent = cnt;
     }
   }
+  const chip = document.getElementById('userChip');
+  if (chip) chip.textContent = currentUser ? currentUser.username : '登录 / 注册';
 }
 
 // ========== 弹窗控制 ==========
 function onGenClick() {
-  const desc = document.getElementById('desc').value.trim();
-  if (!desc) return;
+  const descEl = document.getElementById('desc');
+  const desc = descEl.value.trim();
+  if (!desc) {
+    toast('先写一句你想要的音乐，再点「生成音乐」');
+    if (descEl.focus) descEl.focus();
+    return;
+  }
   if (currentUser) { generate(); return; }
-  // 游客直接检查次数
   const cnt = getGuestCount();
   document.getElementById('guestCount').textContent = cnt;
   document.getElementById('choiceModal').classList.add('show');
@@ -561,9 +2202,11 @@ function startAsGuest() {
 function showAuth(mode) {
   closeModal();
   authMode = mode;
-  document.getElementById('homePage').style.display = 'none';
-  document.getElementById('resultPage').style.display = 'none';
+  Object.keys(SW_PAGES).forEach(function(k){var el=document.getElementById(SW_PAGES[k]);if(el)el.style.display='none';});
+  document.querySelectorAll('.side-link').forEach(function(b){b.classList.remove('is-current');});
   document.getElementById('authPage').style.display = 'flex';
+  const bt = document.getElementById('topbarTitle');
+  if (bt) bt.textContent = '账户';
   switchTab(mode);
 }
 
@@ -572,7 +2215,6 @@ function switchTab(mode) {
   document.getElementById('tabLogin').className = 'auth-tab' + (mode==='login'?' active':'');
   document.getElementById('tabRegister').className = 'auth-tab' + (mode==='register'?' active':'');
   document.getElementById('authTitle').textContent = mode==='login' ? '欢迎回来' : '创建账号';
-  document.getElementById('authSubmit') && (document.querySelector('.auth-submit').textContent = mode==='login' ? '登录' : '注册');
   document.querySelector('.auth-submit').textContent = mode==='login' ? '登录' : '注册';
   document.getElementById('authErr').style.display = 'none';
 }
@@ -593,8 +2235,8 @@ async function submitAuth() {
     const data = await res.json();
     if (data.success) {
       currentUser = { username: data.username, token: data.token, remaining: data.remaining || 30 };
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('username', data.username);
+      safeStorage.setItem('token', data.token);
+      safeStorage.setItem('username', data.username);
       showPage('home');
       updateUsageBar();
     } else {
@@ -607,16 +2249,391 @@ async function submitAuth() {
   }
 }
 
-// 检查本地token
+// 检查本地 token：仅在 JWT 未过期时恢复登录状态
 function checkLocalToken() {
-  const token = localStorage.getItem('token');
-  const username = localStorage.getItem('username');
-  if (token && username) {
-    currentUser = { username, token, remaining: 30 };
+  const token = safeStorage.getItem('token');
+  const username = safeStorage.getItem('username');
+
+  if (!token || !username) {
+    currentUser = null;
+    return;
+  }
+
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('JWT 格式无效');
+    }
+
+    // JWT payload 使用 Base64URL 编码
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+
+    const payload = JSON.parse(jsonPayload);
+    const now = Math.floor(Date.now() / 1000);
+
+    // 有 exp 且已经过期：清理旧登录状态，自动切游客模式
+    if (payload.exp && payload.exp <= now) {
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('username');
+      currentUser = null;
+      console.warn('⚠️ 登录已过期，已自动切换为游客模式');
+      return;
+    }
+
+    currentUser = {
+      username,
+      token,
+      remaining: 30
+    };
+
+    console.log('✅ 本地登录状态有效:', username);
     updateUsageBar();
+
+  } catch (e) {
+    // token 损坏、格式异常时也不要继续请求受保护接口
+    safeStorage.removeItem('token');
+    safeStorage.removeItem('username');
+    currentUser = null;
+    console.warn('⚠️ 本地 Token 无效，已自动切换为游客模式:', e);
   }
 }
 checkLocalToken();
+
+// ============================================================
+// 反馈提示：预览等沙箱环境会拦截原生 alert()，统一改为页面内轻提示
+// （纯附加，不改变任何业务函数的判断与数据结构）
+// ============================================================
+let odToastWrap = null;
+function toast(msg){
+  try{
+    if(!odToastWrap || !odToastWrap.isConnected){odToastWrap=document.createElement('div');odToastWrap.className='od-toast-wrap';document.body.appendChild(odToastWrap);}
+    const t=document.createElement('div');t.className='od-toast';t.setAttribute('role','status');t.textContent=String(msg==null?'':msg);
+    odToastWrap.appendChild(t);
+    setTimeout(function(){t.classList.add('is-out');setTimeout(function(){t.remove();},280);},3200);
+  }catch(_){}
+}
+function comingSoon(name){ toast('「'+(name||'该功能')+'」即将推出'); }
+function showVocalGuideComingSoon(){
+  toast('人声导唱正在开发中，后续将支持根据旋律与歌词生成可试听的人声 Demo。');
+}
+try{ window.alert = function(m){ toast(m); }; }catch(_){}
+
+// ============================================================
+// 界面增强：主题切换 / 侧栏 / 标签页 / 创作辅助
+// ============================================================
+function applyTheme(t){
+  const theme = t === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  try { if (typeof refreshNoteColors === 'function') refreshNoteColors(); } catch (_) {}
+  try { safeStorage.setItem('theme', theme); } catch (_) {}
+  try {
+    const el = document.querySelector('#rChords .chord-tag.active');
+    const diag = document.getElementById('chordDiag');
+    if (el && diag && diag.classList.contains('show')) showChordDiagram(el.textContent.trim(), el);
+  } catch (_) {}
+}
+
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+}
+
+function toggleNav(){
+  const app = document.querySelector('.app');
+  if (app) app.classList.toggle('nav-open');
+}
+
+function onUserChip(){
+  if (currentUser) {
+    safeStorage.removeItem('token');
+    safeStorage.removeItem('username');
+    currentUser = null;
+    updateUsageBar();
+    showPage('home');
+  } else {
+    showAuth('login');
+  }
+}
+
+function useIdea(el){
+  const d = document.getElementById('desc');
+  if (!d) return;
+  d.value = el.textContent.trim();
+  d.focus();
+}
+
+function quickChat(el){
+  const i = document.getElementById('chatInput');
+  if (!i) return;
+  i.value = el.textContent.trim();
+  i.focus();
+}
+
+function downloadMidi(){
+  if (!midiFilePath) { alert('还没有可下载的 MIDI，请先生成'); return; }
+  const a = document.createElement('a');
+  a.href = midiFilePath;
+  a.download = 'soundweaver.mid';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function switchResultTab(name){
+  document.querySelectorAll('.rtab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === name));
+  document.querySelectorAll('.rtab-pane').forEach(p => p.classList.toggle('is-active', p.dataset.pane === name));
+  if (name === 'arrange') renderArrangement(currentParams);
+  if (name === 'idea') renderInspiration();
+}
+
+function renderArrangement(p){
+  const box = document.getElementById('rArrangement');
+  if (!box) return;
+  if (!p) { box.innerHTML = '<div class="arrange-note">暂无编曲信息</div>'; return; }
+  const inst = p.instrument || '钢琴';
+  const isGuitar = inst.includes('吉他');
+  const capo = isGuitar && Number(p.capo) > 0 ? (p.capo + ' 品') : '—';
+  const cards = [
+    ['调式 Key', p.key || '—', ''],
+    ['速度 BPM', p.bpm || '—', ''],
+    ['主乐器', inst, ''],
+    ['变调夹 Capo', capo, isGuitar ? '' : '钢琴无需变调夹'],
+    ['情绪 Mood', p.mood || '—', ''],
+    ['风格 Genre', p.genre || '—', '']
+  ];
+  box.innerHTML = '<div class="arrange-grid">' + cards.map(([k, v, n]) =>
+    '<div class="arrange-card"><div class="arrange-k">' + k + '</div><div class="arrange-v">' + v + '</div>' +
+    (n ? '<div class="arrange-sub">' + n + '</div>' : '') + '</div>'
+  ).join('') + '</div>' +
+  '<div class="arrange-note">和弦走向 · ' + String(p.chords || '—').replace(/</g, '&lt;') + '</div>';
+}
+
+function renderInspiration(){
+  const box = document.getElementById('rInspiration');
+  if (!box) return;
+  box.innerHTML = '';
+  const quote = document.createElement('div');
+  quote.className = 'insp-quote';
+  quote.textContent = currentDesc || '（未记录创作描述）';
+  const note = document.createElement('div');
+  note.className = 'arrange-note';
+  note.textContent = '以上是你最初的创作描述，声织据此生成了和弦、歌词与伴奏。';
+  box.appendChild(quote);
+  box.appendChild(note);
+}
+
+// ============================================================
+// 我的作品 / 作品助手 / 发现
+// 纯前端附加：本地作品库与灵感模板，不新增任何后端接口
+// （safeStorage 在被沙箱拦截时会自动退化为内存存储）
+// ============================================================
+const SW_WORK_KEY='sw_works';
+let swWorks=[];
+const SW_ICON_NOTE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+const SW_ICONS={
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/>',
+  road:'<path d="M4 20 10 4"/><path d="M20 20 14 4"/><path d="M12 5v3M12 12v3M12 19v1"/>',
+  heart:'<path d="M12 20s-7-4.4-9.2-8.6A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5.4C19 15.6 12 20 12 20Z"/>',
+  guitar:'<circle cx="10.5" cy="14.5" r="6"/><circle cx="10.5" cy="14.5" r="2.2"/><path d="M14.8 10.2 20.5 3.8"/>',
+  wave:'<path d="M3 12h2l2-5 3 10 3-14 3 12 2-3h3"/>',
+  film:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M3 15h18M8 5v14M16 5v14"/>',
+  note:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+};
+function swIco(name){return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(SW_ICONS[name]||SW_ICONS.note)+'</svg>';}
+function swSafeGet(key,fb){try{var v=safeStorage.getItem(key);return v?JSON.parse(v):fb;}catch(_){return fb;}}
+function swSafeSet(key,val){try{safeStorage.setItem(key,JSON.stringify(val));}catch(_){}}
+function swEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function swFmtDate(ts){try{var d=new Date(ts);return (d.getMonth()+1)+'月'+d.getDate()+'日';}catch(_){return '';}}
+function swWorkTitle(w){var p=w&&w.params?w.params:{};if(!p.mood&&!p.genre)return '未命名作品';return (p.mood||'')+(p.genre?'的'+p.genre+'风':'');}
+function swSampleLyrics(mood){
+  if(mood==='夜晚')return '[Verse 1]\n[G]城市已经睡了 [D]我还没睡\n[Em]灯光落在窗上 [C]慢慢地碎\n[Chorus]\n[G]让我再听一遍 [D]这首歌\n[Em]直到天边 [C]泛起白色';
+  if(mood==='夏日')return '[Verse 1]\n[C]海风吹过我 [G]的肩\n[Am]单车停在旧 [F]栈桥\n[Chorus]\n[C]夏天不会 [G]太快结束\n[Am]我们还有 [F]一整夜';
+  if(mood==='清晨')return '[Verse 1]\n[C]阳光落在 [G]窗台上\n[Am]咖啡还热着 [F]呢\n[Chorus]\n[C]新的一天 [G]刚刚开始\n[Am]慢慢来 [F]不要着急';
+  return '[Verse 1]\n[Am]雨敲打着窗 [F]像鼓点\n[C]我在这里 [G]慢慢地唱\n[Chorus]\n[Am]直到雨停 [F]天会亮\n[C]所有的等待 [G]都有回响';
+}
+function swDemoWorks(){
+  var base=Date.now();
+  return [
+    {id:'demo-1',date:base-86400000*2,demo:true,desc:'一首关于夜晚城市独处的爵士钢琴曲',params:{mood:'夜晚',genre:'爵士',bpm:82,key:'G Major',capo:0,instrument:'钢琴',chords:'G - D - Em - C',lyrics:swSampleLyrics('夜晚')}},
+    {id:'demo-2',date:base-86400000*5,demo:true,desc:'夏夜海边的轻快民谣，木吉他弹唱',params:{mood:'夏日',genre:'民谣',bpm:96,key:'C Major',capo:2,instrument:'木吉他',chords:'C - G - Am - F',lyrics:swSampleLyrics('夏日')}},
+    {id:'demo-3',date:base-86400000*9,demo:true,desc:'失恋后雨中的慢摇滚，电吉他',params:{mood:'雨夜',genre:'摇滚',bpm:118,key:'A Minor',capo:0,instrument:'电吉他',chords:'Am - F - C - G',lyrics:swSampleLyrics('夜晚')}}
+  ];
+}
+function swLoadWorks(){
+  swWorks=swSafeGet(SW_WORK_KEY,null);
+  if(!Array.isArray(swWorks)||!swWorks.length){swWorks=swDemoWorks();swSafeSet(SW_WORK_KEY,swWorks);}
+  return swWorks;
+}
+function addWork(params,desc){
+  if(!params)return null;
+  swLoadWorks();
+  try{
+    var rec={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:Date.now(),demo:false,desc:desc||'',params:JSON.parse(JSON.stringify(params))};
+    swWorks.unshift(rec);
+    if(swWorks.length>40)swWorks=swWorks.slice(0,40);
+    swSafeSet(SW_WORK_KEY,swWorks);
+    return rec;
+  }catch(_){return null;}
+}
+
+/* ---- 我的作品 ---- */
+let swWorkFilter='all';
+function filterWorks(kind,el){
+  swWorkFilter=kind;
+  document.querySelectorAll('#worksFilter .filter-pill').forEach(function(b){b.classList.toggle('is-active',b===el);});
+  renderWorks();
+}
+function renderWorks(){
+  swLoadWorks();
+  const grid=document.getElementById('worksGrid');if(!grid)return;
+  const count=document.getElementById('worksCount');
+  let list=swWorks.slice();
+  if(swWorkFilter==='钢琴')list=list.filter(function(w){return w.params&&w.params.instrument==='钢琴';});
+  else if(swWorkFilter==='吉他')list=list.filter(function(w){return w.params&&String(w.params.instrument||'').indexOf('吉他')>-1;});
+  if(count)count.textContent=(swWorkFilter==='all'?swWorks.length:list.length)+' 首';
+  if(!list.length){
+    grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">'+SW_ICON_NOTE+'</span><div class="empty-title">这里还没有作品</div><div class="empty-sub">回到创作台描述一段旋律，生成后会自动收进作品库。</div><button class="mini-btn primary" onclick="showPage(\'home\')">去创作</button></div>';
+    return;
+  }
+  grid.innerHTML=list.map(function(w){
+    const p=w.params||{};
+    const inst=p.instrument||'钢琴';
+    const capo=(String(inst).indexOf('吉他')>-1&&Number(p.capo)>0)?'<span class="work-chip">Capo <b>'+swEscape(p.capo)+'</b></span>':'';
+    const title=swWorkTitle(w);
+    return '<article class="work-card">'+
+        '<div class="work-cover"><span class="note-glyph">♪</span><span class="cover-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>'+(w.demo?'<span class="demo-badge">示例</span>':'')+'</div>'+
+        '<div class="work-body">'+
+          '<div class="work-title od-truncate" title="'+swEscape(title)+'">'+swEscape(title)+'</div>'+
+          (w.desc?'<div class="work-desc od-clamp-2">'+swEscape(w.desc)+'</div>':'')+
+          '<div class="work-chips"><span class="work-chip">调式 <b>'+swEscape(p.key||'—')+'</b></span><span class="work-chip">BPM <b>'+swEscape(p.bpm||'—')+'</b></span><span class="work-chip">'+swEscape(inst)+'</span>'+capo+'</div>'+
+        '</div>'+
+        '<div class="work-foot"><span class="work-date">'+swFmtDate(w.date)+'</span>'+
+          '<span class="work-actions">'+
+            '<button class="mini-btn primary" onclick="openWork(\''+w.id+'\')">打开</button>'+
+            '<button class="mini-btn" onclick="openWork(\''+w.id+'\',true)">播放</button>'+
+          '</span>'+
+        '</div>'+
+      '</article>';
+  }).join('');
+}
+function openWork(id,autoplay){
+  swLoadWorks();
+  const w=swWorks.filter(function(x){return x.id===id;})[0];
+  if(!w||!w.params){toast('找不到这首作品');return;}
+  currentDesc=w.desc||'';
+  midiFilePath=null;loadedMidiPath=null;
+  updateUIDisplay(w.params);
+  showPage('result');
+  const pi=document.getElementById('pInfo');
+  if(pi)pi.textContent=w.demo?'示例作品 · 连接后端后可播放':'点击播放 MIDI 伴奏';
+  if(autoplay)toast('预览环境暂不能播放真实伴奏，可先查看谱面与编曲');
+}
+
+/* ---- 作品助手 ---- */
+let swAsstId=null,swAsstSug=[];
+function renderAssistant(){
+  swLoadWorks();
+  const list=document.getElementById('assistantList');
+  if(list){
+    if(!swWorks.length){
+      list.innerHTML='<div class="asst-empty">'+SW_ICON_NOTE+'<div>还没有作品，先去创作一首吧</div></div>';
+    }else{
+      list.innerHTML=swWorks.slice(0,8).map(function(w){
+        const p=w.params||{};
+        const glyph=(p.instrument==='钢琴')?'♩':'♪';
+        return '<button class="asst-row'+(w.id===swAsstId?' is-active':'')+'" onclick="selectAssistantWork(\''+w.id+'\')">'+
+            '<span class="asst-thumb">'+glyph+'</span>'+
+            '<span class="asst-row-t"><span class="asst-row-name od-truncate">'+swEscape(swWorkTitle(w))+'</span>'+
+            '<span class="asst-row-meta od-truncate">'+swEscape((p.key||'—')+' · '+(p.instrument||''))+'</span></span>'+
+          '</button>';
+      }).join('');
+    }
+  }
+  renderAssistantPanel();
+}
+function renderAssistantPanel(){
+  const box=document.getElementById('assistantPanel');if(!box)return;
+  const w=swWorks.filter(function(x){return x.id===swAsstId;})[0];
+  if(!w){
+    swAsstSug=[];
+    box.innerHTML='<div class="asst-empty">'+SW_ICON_NOTE+'<div>从左侧选择一首作品，助手就能给出针对它的修改建议。</div></div>';
+    return;
+  }
+  const p=w.params||{};
+  const inst=String(p.instrument||'钢琴');
+  const isGuitar=inst.indexOf('吉他')>-1;
+  swAsstSug=[
+    {t:'把副歌和声改得更开阔',d:'在现有进行上加入七和弦，让情绪推开一层',p:'把副歌的和弦改得更开阔一些，加入七和弦'},
+    {t:'续写第二段主歌',d:'保持同样的押韵与场景，写一段新的主歌',p:'为这首歌续写第二段主歌，保持同样的情绪和押韵'},
+    {t:isGuitar?'换成钢琴编配':'改成木吉他伴奏',d:isGuitar?'改用钢琴分解和弦，突出旋律线条':'改成木吉他指弹伴奏，保留原调和速度',p:isGuitar?'把这首歌改成钢琴编配':'把这首歌改成木吉他指弹伴奏'},
+    {t:'调整速度与情绪',d:'整体放慢，让情绪更内敛一些',p:'把速度放慢一些，让整首歌的情绪更内敛'}
+  ];
+  box.innerHTML='<div class="asst-panel-head"><div><div class="asst-panel-title">'+swEscape(swWorkTitle(w))+'</div>'+
+      '<div class="asst-panel-sub">'+swEscape(w.desc||'（未记录创作描述）')+' · '+swEscape(p.key||'—')+' · '+swEscape(p.bpm||'—')+' BPM · '+swEscape(inst)+'</div></div>'+
+      '<button class="mini-btn primary" onclick="openWork(\''+w.id+'\')">打开这首</button></div>'+
+    '<div class="suggest-label">可以试试</div>'+
+    '<div class="suggest-grid">'+swAsstSug.map(function(s,i){
+      return '<button class="suggest-card" onclick="assistantSuggest('+i+')"><span class="sc-t">'+
+          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6L4 12z"/></svg>'+swEscape(s.t)+'</span>'+
+          '<span class="sc-d">'+swEscape(s.d)+'</span></button>';
+    }).join('')+'</div>';
+}
+function selectAssistantWork(id){swAsstId=id;renderAssistant();}
+function assistantSuggest(i){
+  const s=swAsstSug[i];if(!s||!swAsstId)return;
+  openWork(swAsstId);
+  const input=document.getElementById('chatInput');
+  if(input)input.value=s.p;
+  toast('已把建议填进对话框，可以直接发送给声织');
+  setTimeout(function(){if(input&&input.focus)input.focus();},140);
+}
+
+/* ---- 发现 ---- */
+function swDiscSection(label,items){
+  return '<section class="disc-section"><div class="disc-label">'+swEscape(label)+'</div><div class="disc-grid">'+items.map(function(it){
+    return '<button class="disc-card" data-prompt="'+swEscape(it.p)+'" onclick="useDiscover(this)">'+
+        '<span class="disc-card-top"><span class="disc-ico">'+swIco(it.i)+'</span><span class="disc-name">'+swEscape(it.n)+'</span></span>'+
+        '<span class="disc-desc">'+swEscape(it.d)+'</span>'+
+        '<span class="disc-tags">'+it.tags.map(function(t){return '<span class="disc-tag">'+swEscape(t)+'</span>';}).join('')+'</span>'+
+      '</button>';
+  }).join('')+'</div></section>';
+}
+function renderDiscover(){
+  const box=document.getElementById('discoverBody');if(!box)return;
+  const moods=[
+    {n:'深夜独处',d:'安静的钢琴与低音弦乐，适合深夜独自写东西时听',p:'深夜独处时的安静钢琴曲，慢速，带一点孤独感',tags:['钢琴','慢速','忧郁'],i:'moon'},
+    {n:'清晨微光',d:'明亮的民谣，像刚醒来的第一缕阳光',p:'清晨醒来时的温柔民谣，木吉他，中速，明亮',tags:['民谣','木吉他','明亮'],i:'sun'},
+    {n:'旅途中',d:'轻快有律动的城市流行，适合在路上循环',p:'旅途中听的轻快城市流行，节奏感强，电吉他',tags:['流行','轻快'],i:'road'},
+    {n:'分手之后',d:'慢摇滚与失真吉他，把情绪推到最高点',p:'失恋后雨中独行的慢摇滚，电吉他，略带撕裂感',tags:['摇滚','电吉他'],i:'heart'}
+  ];
+  const styles=[
+    {n:'城市民谣',d:'木吉他指弹加温暖人声，讲一个城市里的故事',p:'城市民谣，木吉他指弹，温暖的人声，讲述城市里的日常',tags:['木吉他','叙事'],i:'guitar'},
+    {n:'Lo-fi 学习',d:'低饱和的循环节拍，适合专注时当背景',p:'Lo-fi 学习背景音乐，循环节拍，低饱和钢琴，安静',tags:['电子','安静'],i:'wave'},
+    {n:'电影感弦乐',d:'缓慢铺开的弦乐，画面感很强',p:'电影感的弦乐铺陈，缓慢推进，情绪宏大而克制',tags:['弦乐','氛围'],i:'film'},
+    {n:'轻爵士',d:'慵懒的爵士和弦与钢琴即兴',p:'慵懒的轻爵士，钢琴即兴与温和的鼓刷，适合夜晚',tags:['爵士','钢琴'],i:'note'}
+  ];
+  box.innerHTML=swDiscSection('按情绪',moods)+swDiscSection('按风格',styles);
+}
+function useDiscover(el){
+  const d=document.getElementById('desc');if(!d)return;
+  d.value=el.getAttribute('data-prompt')||el.textContent.trim();
+  showPage('home');
+  try{d.focus();}catch(_){}
+  toast('已把这段灵感填进创作台，可以继续修改后生成');
+}
+
+/* 生产版：后端不可达时直接提示真实错误，不再注入示例生成结果。 */
+
+swLoadWorks();
 
 </script>
 </body>
