@@ -2,7 +2,6 @@ package org.qing.musicagent.service;
 
 import dev.langchain4j.agent.tool.Tool;
 import org.qing.musicagent.model.MusicHistory;
-import org.qing.musicagent.model.MusicParams;
 import org.qing.musicagent.repository.MusicHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,9 +14,6 @@ public class MusicTools {
 
     @Autowired
     private MusicHistoryRepository historyRepository;
-
-    @Autowired
-    private MidiService midiService;
 
     // ============================================================
     // Tool 1：查询最近5条历史记录
@@ -77,27 +73,4 @@ public class MusicTools {
                 all.size(), genreSummary, moodSummary);
     }
 
-    // ============================================================
-    // Tool 4：生成MIDI文件
-    // AI可以直接调用这个工具生成音乐
-    // ============================================================
-    @Tool("根据音乐参数生成MIDI文件，返回下载路径")
-    public String generateMidiFile(String mood, String genre,
-                                   int bpm, String key,
-                                   String chords, String lyrics) {
-        try {
-            MusicParams params = new MusicParams();
-            params.setMood(mood);
-            params.setGenre(genre);
-            params.setBpm(bpm);
-            params.setKey(key);
-            params.setChords(chords);
-            params.setLyrics(lyrics);
-
-            String filePath = midiService.generateMidi(params);
-            return "MIDI文件生成成功，下载路径：/music/download?path=" + filePath;
-        } catch (Exception e) {
-            return "生成失败：" + e.getMessage();
-        }
-    }
 }
